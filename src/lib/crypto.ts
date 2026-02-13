@@ -30,15 +30,19 @@ export function lock(): void {
   vaultKey = null;
 }
 
-function arrayToBase64(arr: Uint8Array): string {
+export function arrayToBase64(arr: Uint8Array): string {
   return sodium.to_base64(arr, sodium.base64_variants.ORIGINAL);
 }
 
-function base64ToArray(str: string): Uint8Array {
+export function base64ToArray(str: string): Uint8Array {
   return sodium.from_base64(str, sodium.base64_variants.ORIGINAL);
 }
 
-async function deriveKeyFromPassword(
+// ============================================
+// PASSWORD KEY DERIVATION (Argon2id)
+// ============================================
+
+export async function deriveKeyFromPassword(
   password: string,
   salt: Uint8Array
 ): Promise<Uint8Array> {
@@ -56,6 +60,88 @@ async function deriveKeyFromPassword(
 
   return key;
 }
+
+// ============================================
+// PER-RECORD HKDF KEY DERIVATION (BLAKE2B)
+// ============================================
+
+// 8-byte contexts for domain separation
+const RECORD_CONTEXT = 'junoREC\0';
+const CYCLE_CONTEXT = 'junoCYC\0';
+const PROFILE_CONTEXT = 'junoPRF\0';
+
+/**
+ * Derive a deterministic numeric subkey ID from a string ID.
+ * Uses crypto_generichash (BLAKE2B) to hash the string, then reads
+ * the first 4 bytes as a uint32 (fits in JS number safely, and
+ * crypto_kdf_derive_from_key accepts up to uint64).
+ */
+function idToSubkeyId(id: string): number {
+  const idBytes = new Uint8Array(sodium.from_string(id));
+  const hash = sodium.crypto_generichash(16, idBytes);
+  // Read first 3 bytes as little-endian uint24 (always positive, fits in JS integer)
+  return hash[0] + (hash[1] << 8) + (hash[2] << 16);
+}
+
+function deriveRecordKey(recordId: string): Uint8Array {
+  if (!vaultKey) throw new Error('Vault is locked');
+  const subkeyId = idToSubkeyId(recordId);
+  return sodium.crypto_kdf_derive_from_key(
+    sodium.crypto_secretbox_KEYBYTES,
+    subkeyId,
+    RECORD_CONTEXT,
+    vaultKey
+  );
+}
+
+function deriveCycleKey(cycleId: string): Uint8Array {
+  if (!vaultKey) throw new Error('Vault is locked');
+  const subkeyId = idToSubkeyId(cycleId);
+  return sodium.crypto_kdf_derive_from_key(
+    sodium.crypto_secretbox_KEYBYTES,
+    subkeyId,
+    CYCLE_CONTEXT,
+    vaultKey
+  );
+}
+
+function deriveProfileKey(profileId: string): Uint8Array {
+  if (!vaultKey) throw new Error('Vault is locked');
+  const subkeyId = idToSubkeyId(profileId);
+  return sodium.crypto_kdf_derive_from_key(
+    sodium.crypto_secretbox_KEYBYTES,
+    subkeyId,
+    PROFILE_CONTEXT,
+    vaultKey
+  );
+}
+
+// ============================================
+// SHARED ENCRYPT / DECRYPT HELPERS
+// ============================================
+
+function encryptWithKey(plaintext: string, key: Uint8Array): { nonce: string; ciphertext: string } {
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+  const plaintextBytes = sodium.from_string(plaintext);
+  const message = new Uint8Array(plaintextBytes);
+  const ciphertext = sodium.crypto_secretbox_easy(message, nonce, new Uint8Array(key));
+
+  return {
+    nonce: arrayToBase64(nonce),
+    ciphertext: arrayToBase64(ciphertext),
+  };
+}
+
+function decryptWithKey(ciphertextB64: string, nonceB64: string, key: Uint8Array): string {
+  const nonce = base64ToArray(nonceB64);
+  const ciphertext = base64ToArray(ciphertextB64);
+  const plaintextBytes = sodium.crypto_secretbox_open_easy(ciphertext, nonce, new Uint8Array(key));
+  return sodium.to_string(plaintextBytes);
+}
+
+// ============================================
+// VAULT MANAGEMENT
+// ============================================
 
 export async function createVault(password: string): Promise<void> {
   await initCrypto();
@@ -197,47 +283,35 @@ export async function changePassword(
   return true;
 }
 
+// ============================================
+// RECORD ENCRYPTION (HKDF per-record keys)
+// ============================================
+
 export function encryptRecord(record: HealthRecord): EncryptedRecord {
-  if (!vaultKey) {
-    throw new Error('Vault is locked');
+  const key = deriveRecordKey(record.id);
+  try {
+    const { nonce, ciphertext } = encryptWithKey(JSON.stringify(record), key);
+    return {
+      id: record.id,
+      nonce,
+      ciphertext,
+      category: record.type,
+      version: 2,
+      timestamp: record.updatedAt,
+    };
+  } finally {
+    sodium.memzero(key);
   }
-
-  const plaintext = JSON.stringify(record);
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const plaintextBytes = sodium.from_string(plaintext);
-  // Ensure we have a plain Uint8Array, not a subclass
-  const message = new Uint8Array(plaintextBytes);
-  const key = new Uint8Array(vaultKey);
-  const ciphertext = sodium.crypto_secretbox_easy(
-    message,
-    nonce,
-    key
-  );
-
-  return {
-    id: record.id,
-    nonce: arrayToBase64(nonce),
-    ciphertext: arrayToBase64(ciphertext),
-    category: record.type,
-    version: 1,
-    timestamp: record.updatedAt,
-  };
 }
 
 export function decryptRecord(encryptedRecord: EncryptedRecord): HealthRecord {
-  if (!vaultKey) {
-    throw new Error('Vault is locked');
+  const key = deriveRecordKey(encryptedRecord.id);
+  try {
+    const plaintext = decryptWithKey(encryptedRecord.ciphertext, encryptedRecord.nonce, key);
+    return JSON.parse(plaintext) as HealthRecord;
+  } finally {
+    sodium.memzero(key);
   }
-
-  const nonce = base64ToArray(encryptedRecord.nonce);
-  const ciphertext = base64ToArray(encryptedRecord.ciphertext);
-  const key = new Uint8Array(vaultKey);
-
-  const plaintextBytes = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
-  const plaintext = sodium.to_string(plaintextBytes);
-  const record = JSON.parse(plaintext) as HealthRecord;
-
-  return record;
 }
 
 export function generateId(): string {
@@ -246,82 +320,60 @@ export function generateId(): string {
 }
 
 // ============================================
-// CYCLE DATA ENCRYPTION
+// CYCLE DATA ENCRYPTION (HKDF per-cycle keys)
 // ============================================
 
 export function encryptCycleData(cycle: CycleData): EncryptedCycleData {
-  if (!vaultKey) {
-    throw new Error('Vault is locked');
+  const key = deriveCycleKey(cycle.id);
+  try {
+    const { nonce, ciphertext } = encryptWithKey(JSON.stringify(cycle), key);
+    return {
+      id: cycle.id,
+      nonce,
+      ciphertext,
+      startDate: cycle.startDate, // Keep unencrypted for indexing
+      version: 2,
+    };
+  } finally {
+    sodium.memzero(key);
   }
-
-  const plaintext = JSON.stringify(cycle);
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const plaintextBytes = sodium.from_string(plaintext);
-  const message = new Uint8Array(plaintextBytes);
-  const key = new Uint8Array(vaultKey);
-  const ciphertext = sodium.crypto_secretbox_easy(message, nonce, key);
-
-  return {
-    id: cycle.id,
-    nonce: arrayToBase64(nonce),
-    ciphertext: arrayToBase64(ciphertext),
-    startDate: cycle.startDate, // Keep unencrypted for indexing
-    version: 1,
-  };
 }
 
 export function decryptCycleData(encrypted: EncryptedCycleData): CycleData {
-  if (!vaultKey) {
-    throw new Error('Vault is locked');
+  const key = deriveCycleKey(encrypted.id);
+  try {
+    const plaintext = decryptWithKey(encrypted.ciphertext, encrypted.nonce, key);
+    return JSON.parse(plaintext) as CycleData;
+  } finally {
+    sodium.memzero(key);
   }
-
-  const nonce = base64ToArray(encrypted.nonce);
-  const ciphertext = base64ToArray(encrypted.ciphertext);
-  const key = new Uint8Array(vaultKey);
-
-  const plaintextBytes = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
-  const plaintext = sodium.to_string(plaintextBytes);
-  const cycle = JSON.parse(plaintext) as CycleData;
-
-  return cycle;
 }
 
 // ============================================
-// USER PROFILE ENCRYPTION
+// USER PROFILE ENCRYPTION (HKDF per-profile keys)
 // ============================================
 
 export function encryptUserProfile(profile: UserProfile): EncryptedUserProfile {
-  if (!vaultKey) {
-    throw new Error('Vault is locked');
+  const key = deriveProfileKey(profile.id);
+  try {
+    const { nonce, ciphertext } = encryptWithKey(JSON.stringify(profile), key);
+    return {
+      id: profile.id,
+      nonce,
+      ciphertext,
+      version: 2,
+    };
+  } finally {
+    sodium.memzero(key);
   }
-
-  const plaintext = JSON.stringify(profile);
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const plaintextBytes = sodium.from_string(plaintext);
-  const message = new Uint8Array(plaintextBytes);
-  const key = new Uint8Array(vaultKey);
-  const ciphertext = sodium.crypto_secretbox_easy(message, nonce, key);
-
-  return {
-    id: profile.id,
-    nonce: arrayToBase64(nonce),
-    ciphertext: arrayToBase64(ciphertext),
-    version: 1,
-  };
 }
 
 export function decryptUserProfile(encrypted: EncryptedUserProfile): UserProfile {
-  if (!vaultKey) {
-    throw new Error('Vault is locked');
+  const key = deriveProfileKey(encrypted.id);
+  try {
+    const plaintext = decryptWithKey(encrypted.ciphertext, encrypted.nonce, key);
+    return JSON.parse(plaintext) as UserProfile;
+  } finally {
+    sodium.memzero(key);
   }
-
-  const nonce = base64ToArray(encrypted.nonce);
-  const ciphertext = base64ToArray(encrypted.ciphertext);
-  const key = new Uint8Array(vaultKey);
-
-  const plaintextBytes = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
-  const plaintext = sodium.to_string(plaintextBytes);
-  const profile = JSON.parse(plaintext) as UserProfile;
-
-  return profile;
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronRight, ChevronLeft, Calendar, Heart } from 'lucide-react';
 import { useProfile } from '../hooks/useProfile';
 import { useCycles } from '../hooks/useCycles';
+import { logger } from '../lib/logger';
 import { format, subDays } from 'date-fns';
 
 type SetupStep = 'welcome' | 'birth-year' | 'cycle-length' | 'period-length' | 'week-start' | 'last-period';
@@ -69,17 +70,17 @@ export function ProfileSetup({ onComplete }: { onComplete: () => void }) {
 
       onComplete();
     } catch (error) {
-      console.error('Failed to complete setup:', error);
+      logger.error('Failed to complete setup:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-white flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-white dark:from-rose-950 dark:to-gray-900 flex flex-col">
       {/* Progress bar */}
       {currentStep !== 'welcome' && (
-        <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-10">
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 z-10">
           <div
             className="h-full bg-rose-500 transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -149,16 +150,16 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <div className="w-20 h-20 bg-gradient-to-br from-rose-400 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
         <Heart className="w-10 h-10 text-white" />
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">Welcome to Juno</h1>
-      <p className="text-gray-600 mb-8">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">Welcome to Juno</h1>
+      <p className="text-gray-600 dark:text-gray-300 mb-8">
         Your private period tracker. All your data stays on your device, encrypted and secure.
       </p>
-      <p className="text-sm text-gray-500 mb-8">
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
         Let's set up a few things to give you the best experience.
       </p>
       <button
         onClick={onNext}
-        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium flex items-center justify-center gap-2"
+        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors duration-200 font-medium flex items-center justify-center gap-2"
       >
         Get Started
         <ChevronRight className="w-5 h-5" />
@@ -183,20 +184,20 @@ function BirthYearStep({
 
   return (
     <div className="w-full max-w-md animate-fadeIn">
-      <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-700 flex items-center gap-1">
+      <button onClick={onBack} className="mb-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 flex items-center gap-1">
         <ChevronLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">What year were you born?</h2>
-      <p className="text-gray-500 mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">What year were you born?</h2>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">
         This helps us provide age-appropriate insights. You can skip this if you prefer.
       </p>
 
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-        className="w-full px-4 py-3 border rounded-xl text-lg focus:ring-2 focus:ring-rose-500 mb-4"
+        className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl text-lg focus:ring-2 focus:ring-rose-500 mb-4 transition-colors duration-200"
       >
         <option value="">Prefer not to say</option>
         {years.map((year) => (
@@ -208,7 +209,7 @@ function BirthYearStep({
 
       <button
         onClick={onNext}
-        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium flex items-center justify-center gap-2"
+        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors duration-200 font-medium flex items-center justify-center gap-2"
       >
         Continue
         <ChevronRight className="w-5 h-5" />
@@ -232,13 +233,13 @@ function CycleLengthStep({
 
   return (
     <div className="w-full max-w-md animate-fadeIn">
-      <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-700 flex items-center gap-1">
+      <button onClick={onBack} className="mb-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 flex items-center gap-1">
         <ChevronLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">What's your average cycle length?</h2>
-      <p className="text-gray-500 mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">What's your average cycle length?</h2>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">
         A cycle is counted from the first day of one period to the first day of the next.
         The average is 28 days.
       </p>
@@ -251,10 +252,10 @@ function CycleLengthStep({
               setCustomValue(days.toString());
               onChange(days);
             }}
-            className={`py-3 rounded-xl text-sm font-medium transition-colors ${
+            className={`py-3 rounded-xl text-sm font-medium transition-colors duration-200 ${
               value === days
                 ? 'bg-rose-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
             {days} days
@@ -263,7 +264,7 @@ function CycleLengthStep({
       </div>
 
       <div className="mb-6">
-        <label className="text-sm text-gray-600 mb-1 block">Or enter a custom value:</label>
+        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">Or enter a custom value:</label>
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -274,9 +275,9 @@ function CycleLengthStep({
             }}
             min="20"
             max="45"
-            className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-rose-500"
+            className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-rose-500 transition-colors duration-200"
           />
-          <span className="text-gray-500">days</span>
+          <span className="text-gray-500 dark:text-gray-400">days</span>
         </div>
       </div>
 
@@ -285,14 +286,14 @@ function CycleLengthStep({
           onChange(undefined);
           onNext();
         }}
-        className="w-full py-2 text-gray-500 hover:text-gray-700 mb-2"
+        className="w-full py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 mb-2"
       >
         I don't know
       </button>
 
       <button
         onClick={onNext}
-        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium flex items-center justify-center gap-2"
+        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors duration-200 font-medium flex items-center justify-center gap-2"
       >
         Continue
         <ChevronRight className="w-5 h-5" />
@@ -316,13 +317,13 @@ function PeriodLengthStep({
 
   return (
     <div className="w-full max-w-md animate-fadeIn">
-      <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-700 flex items-center gap-1">
+      <button onClick={onBack} className="mb-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 flex items-center gap-1">
         <ChevronLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">How long does your period usually last?</h2>
-      <p className="text-gray-500 mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">How long does your period usually last?</h2>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">
         Most periods last between 3 and 7 days.
       </p>
 
@@ -334,10 +335,10 @@ function PeriodLengthStep({
               setCustomValue(days.toString());
               onChange(days);
             }}
-            className={`py-3 rounded-xl text-sm font-medium transition-colors ${
+            className={`py-3 rounded-xl text-sm font-medium transition-colors duration-200 ${
               value === days
                 ? 'bg-rose-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
             {days}
@@ -346,7 +347,7 @@ function PeriodLengthStep({
       </div>
 
       <div className="mb-6">
-        <label className="text-sm text-gray-600 mb-1 block">Or enter a custom value:</label>
+        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">Or enter a custom value:</label>
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -357,9 +358,9 @@ function PeriodLengthStep({
             }}
             min="1"
             max="14"
-            className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-rose-500"
+            className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-rose-500 transition-colors duration-200"
           />
-          <span className="text-gray-500">days</span>
+          <span className="text-gray-500 dark:text-gray-400">days</span>
         </div>
       </div>
 
@@ -368,14 +369,14 @@ function PeriodLengthStep({
           onChange(undefined);
           onNext();
         }}
-        className="w-full py-2 text-gray-500 hover:text-gray-700 mb-2"
+        className="w-full py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 mb-2"
       >
         I don't know
       </button>
 
       <button
         onClick={onNext}
-        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium flex items-center justify-center gap-2"
+        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors duration-200 font-medium flex items-center justify-center gap-2"
       >
         Continue
         <ChevronRight className="w-5 h-5" />
@@ -397,29 +398,29 @@ function WeekStartStep({
 }) {
   return (
     <div className="w-full max-w-md animate-fadeIn">
-      <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-700 flex items-center gap-1">
+      <button onClick={onBack} className="mb-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 flex items-center gap-1">
         <ChevronLeft className="w-4 h-4" />
         Back
       </button>
 
       <div className="flex items-center gap-3 mb-2">
         <Calendar className="w-6 h-6 text-rose-500" />
-        <h2 className="text-2xl font-bold text-gray-900">Calendar preference</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Calendar preference</h2>
       </div>
-      <p className="text-gray-500 mb-6">
+      <p className="text-gray-500 dark:text-gray-400 mb-6">
         Which day should the week start on?
       </p>
 
       <div className="space-y-3 mb-6">
         <button
           onClick={() => onChange(0)}
-          className={`w-full py-4 px-4 rounded-xl text-left transition-colors flex items-center justify-between ${
+          className={`w-full py-4 px-4 rounded-xl text-left transition-colors duration-200 flex items-center justify-between ${
             value === 0
-              ? 'bg-rose-50 border-2 border-rose-500'
-              : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+              ? 'bg-rose-50 dark:bg-rose-950 border-2 border-rose-500'
+              : 'bg-gray-50 dark:bg-gray-800 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          <span className={`font-medium ${value === 0 ? 'text-rose-700' : 'text-gray-700'}`}>
+          <span className={`font-medium ${value === 0 ? 'text-rose-700 dark:text-rose-400' : 'text-gray-700 dark:text-gray-300'}`}>
             Sunday
           </span>
           {value === 0 && (
@@ -433,13 +434,13 @@ function WeekStartStep({
 
         <button
           onClick={() => onChange(1)}
-          className={`w-full py-4 px-4 rounded-xl text-left transition-colors flex items-center justify-between ${
+          className={`w-full py-4 px-4 rounded-xl text-left transition-colors duration-200 flex items-center justify-between ${
             value === 1
-              ? 'bg-rose-50 border-2 border-rose-500'
-              : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+              ? 'bg-rose-50 dark:bg-rose-950 border-2 border-rose-500'
+              : 'bg-gray-50 dark:bg-gray-800 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          <span className={`font-medium ${value === 1 ? 'text-rose-700' : 'text-gray-700'}`}>
+          <span className={`font-medium ${value === 1 ? 'text-rose-700 dark:text-rose-400' : 'text-gray-700 dark:text-gray-300'}`}>
             Monday
           </span>
           {value === 1 && (
@@ -454,7 +455,7 @@ function WeekStartStep({
 
       <button
         onClick={onNext}
-        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium flex items-center justify-center gap-2"
+        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors duration-200 font-medium flex items-center justify-center gap-2"
       >
         Continue
         <ChevronRight className="w-5 h-5" />
@@ -492,13 +493,13 @@ function LastPeriodStep({
 
   return (
     <div className="w-full max-w-md animate-fadeIn">
-      <button onClick={onBack} className="mb-4 text-gray-500 hover:text-gray-700 flex items-center gap-1">
+      <button onClick={onBack} className="mb-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 flex items-center gap-1">
         <ChevronLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">When did your last period start?</h2>
-      <p className="text-gray-500 mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">When did your last period start?</h2>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">
         This helps us make accurate predictions right away. You can skip this and log it later.
       </p>
 
@@ -509,13 +510,13 @@ function LastPeriodStep({
           onChange={(e) => handleDateChange(e.target.value)}
           max={maxDate}
           min={minDate}
-          className="w-full px-4 py-3 border rounded-xl text-lg focus:ring-2 focus:ring-rose-500"
+          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl text-lg focus:ring-2 focus:ring-rose-500 transition-colors duration-200"
         />
       </div>
 
       {value && (
-        <div className="bg-rose-50 rounded-xl p-4 mb-6">
-          <p className="text-sm text-rose-700">
+        <div className="bg-rose-50 dark:bg-rose-950 rounded-xl p-4 mb-6">
+          <p className="text-sm text-rose-700 dark:text-rose-400">
             Selected: <strong>{format(new Date(value), 'MMMM d, yyyy')}</strong>
           </p>
         </div>
@@ -526,7 +527,7 @@ function LastPeriodStep({
           onChange(undefined);
           onComplete();
         }}
-        className="w-full py-2 text-gray-500 hover:text-gray-700 mb-2"
+        className="w-full py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200 mb-2"
         disabled={isSubmitting}
       >
         Skip for now
@@ -535,7 +536,7 @@ function LastPeriodStep({
       <button
         onClick={onComplete}
         disabled={isSubmitting}
-        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+        className="w-full py-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors duration-200 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {isSubmitting ? (
           <>

@@ -36,7 +36,7 @@ export function CalendarPage() {
   };
 
   return (
-    <div className="pb-20 sm:pb-0">
+    <div className="pb-20 sm:pb-0 transition-colors duration-200">
       <Calendar onDaySelect={handleDaySelect} />
 
       <DayDetailSheet

@@ -42,8 +42,8 @@ export function SymptomPicker({ value, onChange }: SymptomPickerProps) {
 
   return (
     <div className="space-y-3">
-      <label className="text-sm font-medium text-gray-700">Symptoms</label>
-      <div className="grid grid-cols-3 gap-2">
+      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Symptoms</label>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
         {SYMPTOM_OPTIONS.map((symptom) => {
           const isSelected = selectedSymptoms.has(symptom);
 
@@ -52,10 +52,10 @@ export function SymptomPicker({ value, onChange }: SymptomPickerProps) {
               key={symptom}
               type="button"
               onClick={() => toggleSymptom(symptom)}
-              className={`py-2 px-3 rounded-lg text-sm transition-colors ${
+              className={`py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm transition-colors duration-200 ${
                 isSelected
                   ? 'bg-amber-500 text-white'
-                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                  : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50'
               }`}
             >
               {SYMPTOM_TYPE_LABELS[symptom]}
@@ -67,13 +67,13 @@ export function SymptomPicker({ value, onChange }: SymptomPickerProps) {
       {/* Severity controls for selected symptoms */}
       {value.length > 0 && (
         <div className="mt-4 space-y-3">
-          <label className="text-sm font-medium text-gray-700">Severity</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Severity</label>
           {value.map((entry) => (
             <div
               key={entry.type}
-              className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+              className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-lg"
             >
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 {SYMPTOM_TYPE_LABELS[entry.type]}
               </span>
               <div className="flex gap-1">
@@ -82,10 +82,10 @@ export function SymptomPicker({ value, onChange }: SymptomPickerProps) {
                     key={severity}
                     type="button"
                     onClick={() => updateSeverity(entry.type, severity)}
-                    className={`px-3 py-1 rounded text-xs transition-colors ${
+                    className={`px-3 py-1 rounded text-xs transition-colors duration-200 ${
                       entry.severity === severity
                         ? 'bg-amber-500 text-white'
-                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50'
                     }`}
                   >
                     {SEVERITY_LABELS[severity]}

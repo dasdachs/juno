@@ -6,6 +6,7 @@ import type {
   KeyStore,
   AppSettings,
 } from './types';
+import { logger } from './logger';
 
 class JunoVaultDB extends Dexie {
   records!: EntityTable<EncryptedRecord, 'id'>;
@@ -71,6 +72,8 @@ export async function migrateFromHealthVault(): Promise<boolean> {
           lastUnlockedAt: setting.lastUnlockedAt,
           periodReminderEnabled: false,
           periodReminderDays: 3,
+          autoLockOnHidden: true,
+          autoLockGracePeriod: 30000,
         };
         await db.settings.put(migratedSetting);
       }
@@ -82,10 +85,10 @@ export async function migrateFromHealthVault(): Promise<boolean> {
     // Delete old database after successful migration
     await oldDb.delete();
 
-    console.log('Migration from HealthVault completed successfully');
+    logger.info('Migration from HealthVault completed successfully');
     return true;
   } catch (error) {
-    console.error('Migration from HealthVault failed:', error);
+    logger.error('Migration from HealthVault failed:', error);
     return false;
   }
 }
@@ -115,6 +118,8 @@ export async function getSettings(): Promise<AppSettings> {
       sessionTimeout: 15 * 60 * 1000, // 15 minutes default
       periodReminderEnabled: false,
       periodReminderDays: 3,
+      autoLockOnHidden: true,
+      autoLockGracePeriod: 30000, // 30 seconds
     };
     await db.settings.put(settings);
   }

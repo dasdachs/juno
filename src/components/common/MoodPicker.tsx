@@ -41,8 +41,8 @@ export function MoodPicker({ value, onChange }: MoodPickerProps) {
 
   return (
     <div className="space-y-3">
-      <label className="text-sm font-medium text-gray-700">How are you feeling?</label>
-      <div className="grid grid-cols-3 gap-2">
+      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">How are you feeling?</label>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {MOOD_OPTIONS.map((mood) => {
           const isSelected = value.includes(mood);
 
@@ -51,14 +51,14 @@ export function MoodPicker({ value, onChange }: MoodPickerProps) {
               key={mood}
               type="button"
               onClick={() => toggleMood(mood)}
-              className={`flex flex-col items-center py-3 px-2 rounded-lg transition-colors ${
+              className={`flex flex-col items-center py-3 px-2 rounded-lg transition-colors duration-200 ${
                 isSelected
                   ? 'bg-sky-500 text-white'
-                  : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
+                  : 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50'
               }`}
             >
-              <span className="text-2xl mb-1">{MOOD_EMOJI[mood]}</span>
-              <span className="text-xs">{MOOD_TYPE_LABELS[mood]}</span>
+              <span className="text-xl sm:text-2xl mb-1">{MOOD_EMOJI[mood]}</span>
+              <span className="text-xs sm:text-sm leading-tight">{MOOD_TYPE_LABELS[mood]}</span>
             </button>
           );
         })}

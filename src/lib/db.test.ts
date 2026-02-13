@@ -109,6 +109,8 @@ describe('db', () => {
         sessionTimeout: 60000,
         periodReminderEnabled: false,
         periodReminderDays: 2,
+        autoLockOnHidden: true,
+        autoLockGracePeriod: 30000,
       });
 
       expect(await db.records.count()).toBe(1);
@@ -155,6 +157,8 @@ describe('db', () => {
         sessionTimeout: 30 * 60 * 1000,
         periodReminderEnabled: false,
         periodReminderDays: 2,
+        autoLockOnHidden: true,
+        autoLockGracePeriod: 30000,
       };
 
       await db.settings.put(customSettings);
@@ -181,6 +185,8 @@ describe('db', () => {
         lastUnlockedAt: 12345,
         periodReminderEnabled: true,
         periodReminderDays: 3,
+        autoLockOnHidden: true,
+        autoLockGracePeriod: 30000,
       });
 
       await updateSettings({ sessionTimeout: 20 * 60 * 1000 });

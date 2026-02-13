@@ -25,8 +25,8 @@ const FLOW_COLORS: Record<FlowIntensity, { bg: string; active: string }> = {
 export function FlowIntensityPicker({ value, onChange }: FlowIntensityPickerProps) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">Flow Intensity</label>
-      <div className="flex gap-2">
+      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Flow Intensity</label>
+      <div className="flex gap-2 sm:gap-3">
         {FLOW_OPTIONS.map((intensity) => {
           const isSelected = value === intensity;
           const colors = FLOW_COLORS[intensity];
@@ -36,7 +36,7 @@ export function FlowIntensityPicker({ value, onChange }: FlowIntensityPickerProp
               key={intensity}
               type="button"
               onClick={() => onChange(intensity)}
-              className={`flex-1 py-3 px-2 rounded-lg transition-all ${
+              className={`flex-1 py-3 px-2 rounded-lg transition-all duration-200 ${
                 isSelected ? colors.active : `${colors.bg} hover:opacity-80`
               }`}
             >
@@ -56,7 +56,7 @@ export function FlowIntensityPicker({ value, onChange }: FlowIntensityPickerProp
                 />
                 <span
                   className={`text-xs ${
-                    isSelected ? 'font-medium text-rose-900' : 'text-rose-700'
+                    isSelected ? 'font-medium text-rose-900 dark:text-rose-100' : 'text-rose-700 dark:text-rose-300'
                   }`}
                 >
                   {FLOW_INTENSITY_LABELS[intensity]}

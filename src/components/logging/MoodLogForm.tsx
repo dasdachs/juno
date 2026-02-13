@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { MoodPicker } from '../common/MoodPicker';
 import { BottomSheet } from '../common/BottomSheet';
 import { useRecords } from '../../hooks/useRecords';
+import { logger } from '../../lib/logger';
 import type { MoodType, MoodData } from '../../lib/types';
 import { startOfDay } from '../../lib/predictions';
 
@@ -55,7 +56,7 @@ export function MoodLogForm({
 
       onClose();
     } catch (error) {
-      console.error('Failed to save mood log:', error);
+      logger.error('Failed to save mood log:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +70,7 @@ export function MoodLogForm({
       await deleteRecord(existingRecord.id);
       onClose();
     } catch (error) {
-      console.error('Failed to delete mood log:', error);
+      logger.error('Failed to delete mood log:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -78,28 +79,28 @@ export function MoodLogForm({
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="Log Mood">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">{dateLabel}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{dateLabel}</p>
 
         <MoodPicker value={moods} onChange={setMoods} />
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Notes (optional)</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (optional)</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+            className="mt-1 w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-colors duration-200"
             rows={3}
             placeholder="Any additional notes..."
           />
         </div>
 
-        <div className="flex gap-3 pt-4">
+        <div className={`flex gap-2 sm:gap-3 pt-4 ${existingRecord ? 'flex-col sm:flex-row' : 'flex-col sm:flex-row'}`}>
           {existingRecord && (
             <button
               type="button"
               onClick={handleDelete}
               disabled={isSubmitting}
-              className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50"
+              className="w-full sm:auto px-4 py-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 text-sm transition-colors duration-200"
             >
               Delete
             </button>
@@ -107,7 +108,7 @@ export function MoodLogForm({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-sm transition-colors duration-200"
           >
             Cancel
           </button>
@@ -115,7 +116,7 @@ export function MoodLogForm({
             type="button"
             onClick={handleSave}
             disabled={moods.length === 0 || isSubmitting}
-            className="flex-1 px-4 py-2 text-white bg-sky-500 rounded-lg hover:bg-sky-600 disabled:opacity-50"
+            className="flex-1 px-4 py-2 text-white bg-sky-500 rounded-lg hover:bg-sky-600 disabled:opacity-50 text-sm transition-colors duration-200"
           >
             {isSubmitting ? 'Saving...' : 'Save'}
           </button>

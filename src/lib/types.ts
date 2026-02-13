@@ -214,6 +214,14 @@ export interface AppSettings {
   lastUnlockedAt?: number;
   periodReminderEnabled: boolean;
   periodReminderDays: number;
+  oauthEnabled?: boolean;
+  oauthProvider?: 'google' | null;
+  oauthUserId?: string | null;
+  autoLockOnHidden: boolean;
+  autoLockGracePeriod: number;
+  deviceId?: string;
+  syncAdapter?: string;
+  lastSyncAt?: number;
 }
 
 // ============================================

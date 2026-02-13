@@ -7,11 +7,15 @@ import {
   isUnlocked,
   encryptRecord,
   decryptRecord,
+  encryptCycleData,
+  decryptCycleData,
+  encryptUserProfile,
+  decryptUserProfile,
   generateId,
   changePassword,
 } from './crypto';
 import { db } from './db';
-import type { HealthRecord, NoteData } from './types';
+import type { HealthRecord, NoteData, CycleData, UserProfile } from './types';
 
 describe('crypto', () => {
   beforeEach(async () => {
@@ -160,6 +164,7 @@ describe('crypto', () => {
       expect(encrypted.nonce).toBeDefined();
       expect(encrypted.ciphertext).toBeDefined();
       expect(encrypted.ciphertext).not.toContain('Test Note');
+      expect(encrypted.version).toBe(2);
 
       const decrypted = decryptRecord(encrypted);
 
@@ -185,8 +190,89 @@ describe('crypto', () => {
       lock();
 
       expect(() => encryptRecord(record)).toThrow('Vault is locked');
-      expect(() => decryptRecord({ id: '1', nonce: '', ciphertext: '', category: 'note', version: 1, timestamp: Date.now() }))
+      expect(() => decryptRecord({ id: '1', nonce: '', ciphertext: '', category: 'note', version: 2, timestamp: Date.now() }))
         .toThrow('Vault is locked');
+    });
+  });
+
+  describe('HKDF per-record key derivation', () => {
+    beforeEach(async () => {
+      await createVault('testpassword');
+    });
+
+    it('should derive deterministic keys (same vault + ID = same decryption)', () => {
+      const record = createTestRecord();
+      const encrypted = encryptRecord(record);
+      const decrypted = decryptRecord(encrypted);
+      expect(decrypted.id).toBe(record.id);
+      expect((decrypted.data as NoteData).title).toBe('Test Note');
+    });
+
+    it('should produce different derived keys for different record IDs', () => {
+      const record1 = createTestRecord();
+      const record2 = createTestRecord(); // different ID via generateId()
+
+      const encrypted1 = encryptRecord(record1);
+      encryptRecord(record2); // Verify encryption works for record2 too
+
+      // Cross-decryption should fail: record1's ciphertext can't be decrypted with record2's key
+      expect(() => {
+        decryptRecord({ ...encrypted1, id: record2.id });
+      }).toThrow();
+    });
+
+    it('should encrypt/decrypt cycle data round-trip', () => {
+      const cycle = createTestCycle();
+      const encrypted = encryptCycleData(cycle);
+      expect(encrypted.version).toBe(2);
+      expect(encrypted.startDate).toBe(cycle.startDate);
+
+      const decrypted = decryptCycleData(encrypted);
+      expect(decrypted.id).toBe(cycle.id);
+      expect(decrypted.cycleNumber).toBe(cycle.cycleNumber);
+      expect(decrypted.startDate).toBe(cycle.startDate);
+    });
+
+    it('should encrypt/decrypt user profile round-trip', () => {
+      const profile = createTestProfile();
+      const encrypted = encryptUserProfile(profile);
+      expect(encrypted.version).toBe(2);
+
+      const decrypted = decryptUserProfile(encrypted);
+      expect(decrypted.id).toBe(profile.id);
+      expect(decrypted.birthYear).toBe(profile.birthYear);
+      expect(decrypted.averageCycleLength).toBe(profile.averageCycleLength);
+    });
+
+    it('should use different keys for different entity types with same ID', () => {
+      // Create a record and cycle with the same base ID to verify domain separation
+      const id = generateId();
+      const record: HealthRecord = {
+        id,
+        type: 'note',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        data: { date: Date.now(), title: 'Test', content: 'Content' } as NoteData,
+        tags: [],
+      };
+      const cycle: CycleData = {
+        id,
+        cycleNumber: 1,
+        startDate: Date.now(),
+      };
+
+      encryptRecord(record); // Verify record encryption works
+      const encryptedCycle = encryptCycleData(cycle);
+
+      // Cross-type decryption should fail (different KDF contexts)
+      expect(() => {
+        decryptRecord({
+          ...encryptedCycle,
+          category: 'note',
+          version: 2,
+          timestamp: Date.now(),
+        });
+      }).toThrow();
     });
   });
 
@@ -217,9 +303,33 @@ function createTestRecord(): HealthRecord {
     createdAt: Date.now(),
     updatedAt: Date.now(),
     data: {
+      date: Date.now(),
       title: 'Test Note',
       content: 'This is test content',
     } as NoteData,
     tags: ['test'],
+  };
+}
+
+function createTestCycle(): CycleData {
+  return {
+    id: generateId(),
+    cycleNumber: 1,
+    startDate: Date.now(),
+    endDate: Date.now() + 28 * 24 * 60 * 60 * 1000,
+    periodLength: 5,
+    cycleLength: 28,
+  };
+}
+
+function createTestProfile(): UserProfile {
+  return {
+    id: 'primary',
+    birthYear: 1995,
+    averageCycleLength: 28,
+    averagePeriodLength: 5,
+    weekStartsOn: 1,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
   };
 }
