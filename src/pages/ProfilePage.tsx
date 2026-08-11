@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useProfile } from '../hooks/useProfile';
 import { logger } from '../lib/logger';
+import { Avatar } from '../components/common';
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { profile, updateProfile, isLoading } = useProfile();
+  const [name, setName] = useState<string>('');
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [birthYear, setBirthYear] = useState<string>('');
   const [height, setHeight] = useState<string>('');
   const [weight, setWeight] = useState<string>('');
@@ -18,6 +21,8 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
+      setName(profile.name ?? '');
+      setAvatarUrl(profile.avatarUrl ?? '');
       setBirthYear(profile.birthYear?.toString() ?? '');
       setHeight(profile.height?.toString() ?? '');
       setWeight(profile.weight?.toString() ?? '');
@@ -31,6 +36,8 @@ export function ProfilePage() {
     setIsSaving(true);
     try {
       await updateProfile({
+        name: name.trim() ? name.trim() : undefined,
+        avatarUrl: avatarUrl.trim() ? avatarUrl.trim() : undefined,
         birthYear: birthYear ? parseInt(birthYear) : undefined,
         height: height ? parseFloat(height) : undefined,
         weight: weight ? parseFloat(weight) : undefined,
@@ -69,6 +76,38 @@ export function ProfilePage() {
         {/* Personal Info */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4 shadow-sm transition-colors duration-200">
           <h2 className="font-medium text-gray-900 dark:text-gray-100">Personal Information</h2>
+
+          <div className="flex items-center gap-4">
+            <Avatar avatarUrl={avatarUrl || undefined} name={name || undefined} size="lg" />
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Jani"
+                className="mt-1 w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-colors duration-200"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Avatar URL
+            </label>
+            <input
+              type="url"
+              value={avatarUrl}
+              onChange={(e) => setAvatarUrl(e.target.value)}
+              placeholder="https://example.com/photo.jpg"
+              className="mt-1 w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-colors duration-200"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Paste a link to an image. If it doesn't load, we'll show your initials instead.
+            </p>
+          </div>
 
           <div>
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
