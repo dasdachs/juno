@@ -44,4 +44,15 @@ describe('Avatar', () => {
 
     expect(screen.getByText('JS')).toBeInTheDocument();
   });
+
+  it('should recover when avatarUrl changes from a broken URL to a working one', () => {
+    const { rerender } = render(<Avatar avatarUrl="https://example.com/broken.jpg" name="Jani Sumak" />);
+
+    fireEvent.error(screen.getByRole('img'));
+    expect(screen.getByText('JS')).toBeInTheDocument();
+
+    rerender(<Avatar avatarUrl="https://example.com/new.jpg" name="Jani Sumak" />);
+
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://example.com/new.jpg');
+  });
 });

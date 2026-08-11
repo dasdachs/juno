@@ -50,6 +50,7 @@ export function Avatar({ avatarUrl, name, size = 'md' }: AvatarProps) {
           src={avatarUrl}
           alt={name ? `${name}'s avatar` : 'Avatar'}
           className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
           onError={() => setImageFailed(true)}
         />
       </div>
