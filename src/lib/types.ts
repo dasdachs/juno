@@ -154,6 +154,8 @@ export interface CyclePrediction {
 
 export interface UserProfile {
   id: string;
+  name?: string;
+  avatarUrl?: string;
   birthYear?: number;
   height?: number;
   weight?: number;
