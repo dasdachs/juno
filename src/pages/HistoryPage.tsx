@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Droplets, Heart, Frown, Smile, FileText, Filter } from 'lucide-react';
+import { FileText, Filter, Pencil } from 'lucide-react';
 import { useRecords } from '../hooks/useRecords';
+import { useLogForm } from '../components/logging';
+import { useDateFormat } from '../contexts/DateFormatContext';
+import { RECORD_TYPE_META } from '../lib/recordTypeMeta';
 import type { RecordType, HealthRecord, FlowIntensity } from '../lib/types';
 import {
   RECORD_TYPE_LABELS,
@@ -10,27 +13,13 @@ import {
   MOOD_TYPE_LABELS,
 } from '../lib/types';
 
-const TYPE_ICONS: Record<RecordType, React.ReactNode> = {
-  period: <Droplets className="w-4 h-4" />,
-  intimacy: <Heart className="w-4 h-4" />,
-  symptom: <Frown className="w-4 h-4" />,
-  mood: <Smile className="w-4 h-4" />,
-  note: <FileText className="w-4 h-4" />,
-};
-
-const TYPE_COLORS: Record<RecordType, string> = {
-  period: 'bg-rose-100 text-rose-600',
-  intimacy: 'bg-violet-100 text-violet-600',
-  symptom: 'bg-amber-100 text-amber-600',
-  mood: 'bg-sky-100 text-sky-600',
-  note: 'bg-gray-100 text-gray-600',
-};
-
 export function HistoryPage() {
   const [filterType, setFilterType] = useState<RecordType | 'all'>('all');
   const { records, isLoading } = useRecords(
     filterType !== 'all' ? { type: filterType } : {}
   );
+  const { openEdit, logForm } = useLogForm();
+  const { formatLong } = useDateFormat();
 
   const sortedRecords = [...records].sort((a, b) => {
     const dateA = (a.data as { date?: number }).date || a.createdAt;
@@ -85,24 +74,30 @@ export function HistoryPage() {
           {Object.entries(groupedRecords).map(([dateKey, dayRecords]) => (
             <div key={dateKey}>
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                {format(new Date(dateKey), 'EEEE, MMMM d, yyyy')}
+                {formatLong(new Date(dateKey), true)}
               </h3>
               <div className="space-y-3">
                 {dayRecords.map((record) => (
-                  <RecordCard key={record.id} record={record} />
+                  <RecordCard
+                    key={record.id}
+                    record={record}
+                    onEdit={() => openEdit(record)}
+                  />
                 ))}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {logForm}
     </div>
   );
 }
 
-function RecordCard({ record }: { record: HealthRecord }) {
-  const colorClass = TYPE_COLORS[record.type];
-  const icon = TYPE_ICONS[record.type];
+function RecordCard({ record, onEdit }: { record: HealthRecord; onEdit: () => void }) {
+  const meta = RECORD_TYPE_META[record.type];
+  const Icon = meta.icon;
 
   const renderContent = () => {
     switch (record.type) {
@@ -192,21 +187,31 @@ function RecordCard({ record }: { record: HealthRecord }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm transition-colors duration-200">
+    <button
+      type="button"
+      onClick={onEdit}
+      aria-label={`Edit ${RECORD_TYPE_LABELS[record.type]} entry`}
+      className="w-full text-left bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:border-rose-300 dark:hover:border-rose-700 transition-colors duration-200"
+    >
       <div className="flex items-start gap-3">
-        <div className={`p-2 rounded-lg ${colorClass}`}>{icon}</div>
+        <div className={`p-2 rounded-lg ${meta.badgeClass}`}>
+          <Icon className="w-4 h-4" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
               {RECORD_TYPE_LABELS[record.type]}
             </span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">
-              {format(new Date(record.createdAt), 'h:mm a')}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {format(new Date(record.createdAt), 'h:mm a')}
+              </span>
+              <Pencil className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+            </div>
           </div>
           {renderContent()}
         </div>
       </div>
-    </div>
+    </button>
   );
 }

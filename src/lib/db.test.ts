@@ -1,6 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db, clearAllData, hasExistingVault, getSettings, updateSettings } from './db';
 import type { EncryptedRecord, KeyStore, AppSettings } from './types';
+
+vi.mock('./dateFormat', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./dateFormat')>();
+  return { ...actual, inferDateFormatStyle: () => 'iso' };
+});
 
 describe('db', () => {
   beforeEach(async () => {
@@ -165,6 +170,40 @@ describe('db', () => {
 
       const settings = await getSettings();
       expect(settings.sessionTimeout).toBe(30 * 60 * 1000);
+    });
+
+    it('should infer dateFormat from system locale for newly created settings', async () => {
+      const settings = await getSettings();
+      expect(settings.dateFormat).toBe('iso');
+    });
+
+    it('should not overwrite dateFormat on existing settings', async () => {
+      await db.settings.put({
+        id: 'primary',
+        sessionTimeout: 15 * 60 * 1000,
+        periodReminderEnabled: false,
+        periodReminderDays: 3,
+        autoLockOnHidden: true,
+        autoLockGracePeriod: 30000,
+        dateFormat: 'us',
+      });
+
+      const settings = await getSettings();
+      expect(settings.dateFormat).toBe('us');
+    });
+
+    it('should leave dateFormat undefined for settings that predate the field', async () => {
+      await db.settings.put({
+        id: 'primary',
+        sessionTimeout: 15 * 60 * 1000,
+        periodReminderEnabled: false,
+        periodReminderDays: 3,
+        autoLockOnHidden: true,
+        autoLockGracePeriod: 30000,
+      });
+
+      const settings = await getSettings();
+      expect(settings.dateFormat).toBeUndefined();
     });
   });
 

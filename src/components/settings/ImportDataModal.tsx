@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Upload, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { parseManifest, importData, type ExportManifest } from '../../lib/exportImport';
+import { useDateFormat } from '../../contexts/DateFormatContext';
 
 interface ImportDataModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function ImportDataModal({ isOpen, onClose, onSuccess }: ImportDataModalP
   const [error, setError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const { formatShort } = useDateFormat();
 
   if (!isOpen) return null;
 
@@ -121,7 +123,7 @@ export function ImportDataModal({ isOpen, onClose, onSuccess }: ImportDataModalP
                   <ul className="text-gray-500 dark:text-gray-400 space-y-1">
                     <li>
                       Exported:{' '}
-                      {new Date(manifest.exportedAt).toLocaleDateString()}
+                      {formatShort(manifest.exportedAt)}
                     </li>
                     <li>Records: {manifest.recordCount}</li>
                     <li>Cycles: {manifest.cycleCount}</li>

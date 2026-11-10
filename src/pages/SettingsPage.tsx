@@ -10,17 +10,23 @@ import {
   Lock,
   Eye,
   Info,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useDateFormat } from '../contexts/DateFormatContext';
 import { getSettings, updateSettings, clearAllData } from '../lib/db';
 import { changePassword } from '../lib/crypto';
-import { OAuthSettings } from '../components/settings/OAuthSettings';
 import { SyncSettings } from '../components/settings/SyncSettings';
 import { ExportDataModal } from '../components/settings/ExportDataModal';
 import { ImportDataModal } from '../components/settings/ImportDataModal';
+import { DATE_FORMAT_LABELS, formatLongDate, type DateFormatStyle } from '../lib/dateFormat';
+
+const DATE_FORMAT_STYLES: DateFormatStyle[] = ['us', 'international', 'iso'];
+const DATE_FORMAT_PREVIEW_DATE = new Date(2024, 0, 15);
 
 export function SettingsPage() {
   const { lock } = useAuth();
+  const { dateFormat, setDateFormat } = useDateFormat();
   const [sessionTimeout, setSessionTimeout] = useState<number | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -263,9 +269,46 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Google Sign-In */}
-        <OAuthSettings />
+      {/* Preferences Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <CalendarDays className="w-4 h-4" />
+            Preferences
+          </h2>
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <CalendarDays className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <div>
+              <p className="font-medium text-gray-900 dark:text-gray-100">Date Format</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                How dates are displayed throughout the app
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {DATE_FORMAT_STYLES.map((style) => (
+              <button
+                key={style}
+                onClick={() => setDateFormat(style)}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 ${
+                  dateFormat === style
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                <span className="font-medium">{DATE_FORMAT_LABELS[style]}</span>
+                <span className="block text-xs opacity-80">
+                  {formatLongDate(DATE_FORMAT_PREVIEW_DATE, style)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Sync Section */}

@@ -68,12 +68,12 @@ export function SyncSettings() {
   };
 
   return (
-    <div className="p-4 border-b">
+    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-3 mb-3">
-        <Cloud className="w-5 h-5 text-gray-500" />
+        <Cloud className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         <div className="flex-1">
-          <p className="font-medium text-gray-900">File-based Sync</p>
-          <p className="text-sm text-gray-500">
+          <p className="font-medium text-gray-900 dark:text-gray-100">File-based Sync</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Manual sync via file transfer
           </p>
         </div>
@@ -81,14 +81,14 @@ export function SyncSettings() {
 
       <div className="space-y-3">
         {/* Device ID */}
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
           <span className="font-medium">Device ID:</span>{' '}
           <span className="font-mono">{deviceId.slice(0, 8)}...</span>
         </div>
 
         {/* Last Sync */}
         {lastSyncAt && (
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             <span className="font-medium">Last synced:</span>{' '}
             {new Date(lastSyncAt).toLocaleString()}
           </div>
@@ -99,7 +99,7 @@ export function SyncSettings() {
           <button
             onClick={handlePush}
             disabled={isSyncing}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 disabled:opacity-50 text-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-rose-100 dark:bg-rose-900/30 text-rose-700 rounded-lg hover:bg-rose-200 disabled:opacity-50 text-sm"
           >
             <Upload className="w-4 h-4" />
             Push (Export)
@@ -107,7 +107,7 @@ export function SyncSettings() {
           <button
             onClick={handlePull}
             disabled={isSyncing}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 disabled:opacity-50 text-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-rose-100 dark:bg-rose-900/30 text-rose-700 rounded-lg hover:bg-rose-200 disabled:opacity-50 text-sm"
           >
             <Download className="w-4 h-4" />
             Pull (Import)
@@ -115,10 +115,10 @@ export function SyncSettings() {
         </div>
 
         {syncMessage && (
-          <p className="text-xs text-gray-600 text-center">{syncMessage}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 text-center">{syncMessage}</p>
         )}
 
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
           Push exports your data to a sync file. Pull imports data from a sync file
           and merges it with your local data.
         </p>

@@ -7,6 +7,7 @@ import type {
   AppSettings,
 } from './types';
 import { logger } from './logger';
+import { inferDateFormatStyle } from './dateFormat';
 
 class JunoVaultDB extends Dexie {
   records!: EntityTable<EncryptedRecord, 'id'>;
@@ -120,6 +121,7 @@ export async function getSettings(): Promise<AppSettings> {
       periodReminderDays: 3,
       autoLockOnHidden: true,
       autoLockGracePeriod: 30000, // 30 seconds
+      dateFormat: inferDateFormatStyle(),
     };
     await db.settings.put(settings);
   }

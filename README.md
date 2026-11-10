@@ -1,50 +1,71 @@
-# React + TypeScript + Vite
+# Juno - Private Period Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A secure, privacy-focused period tracking application built with React, TypeScript, and Vite. Your data stays on your device, encrypted and secure.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Privacy First**: All data is encrypted and stored locally on your device
+- **Offline Ready**: Works fully offline as a Progressive Web App (PWA)
+- **Secure**: End-to-end encryption with password protection
+- **Fast**: Instant load times with cached assets
+- **Mobile Optimized**: Standalone app experience on mobile devices
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- **Frontend**: React 18 with TypeScript
+- **Build Tool**: Vite with HMR support
+- **Styling**: Tailwind CSS
+- **PWA**: Vite PWA Plugin with Workbox
+- **Encryption**: libsodium for secure data encryption
+- **Testing**: Vitest with jsdom
 
-- Configure the top-level `parserOptions` property like this:
+## PWA Updates
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+Juno is a Progressive Web App that updates automatically in the background. Here's how updates are handled:
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### Update Flow
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+1. **Automatic Detection**: The app checks for updates periodically
+2. **Background Installation**: New version is downloaded and installed in the background
+3. **User Notification**: When an update is available, a notification banner appears
+4. **User Action**: Users can click "Reload Now" to apply the update immediately
+5. **Immediate Activation**: With `skipWaiting: true` and `clientsClaim: true`, the new service worker takes over immediately
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+### Update Configuration
+
+The PWA is configured in `vite.config.ts` with:
+
+- **registerType**: `'autoUpdate'` - Service worker updates automatically
+- **skipWaiting**: `true` - New service worker doesn't wait for old ones to close
+- **clientsClaim**: `true` - New service worker claims all tabs immediately
+- **Update Notification**: A banner appears when updates are available (`UpdateNotification` component)
+
+### User Experience
+
+When an update is available:
+1. A banner appears at the bottom of the screen
+2. Users are notified that a new version is available
+3. Users can choose to "Reload Now" to apply the update
+4. The app reloads and uses the latest version
+
+### For Developers
+
+Updates are triggered by:
+- Browser refresh/reload
+- Regular update checks (configured in `vite-plugin-pwa`)
+- Deploying new code to production
+
+The update process is non-disruptive - users can continue working while the new version is downloaded in the background.
+
+## Deployment
+
+For detailed deployment instructions including free cloud hosting and self-hosted options, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+**Quick start:**
+- **Free Cloud**: `npx vercel` (requires Vercel account)
+- **Self-hosted**: See DEPLOYMENT.md for Nginx, Docker, and Apache configurations
+- **Automated Deployment**: Pushes to `main` branch are automatically deployed to Cloudflare Pages via GitHub Actions.
+
+**Requirements:**
+- HTTPS is mandatory for PWA functionality
+- Service worker must not be cached by CDN/server

@@ -2,8 +2,12 @@ import { useState } from 'react';
 import { format, parse, eachDayOfInterval } from 'date-fns';
 import { FlowIntensityPicker } from '../common/FlowIntensityPicker';
 import { BottomSheet } from '../common/BottomSheet';
+import { LogFormActions } from './LogFormActions';
 import { useRecords } from '../../hooks/useRecords';
 import { useCycles } from '../../hooks/useCycles';
+import { useToast } from '../../contexts/ToastContext';
+import { useDateFormat } from '../../contexts/DateFormatContext';
+import { openDatePicker } from '../../lib/dateFormat';
 import { logger } from '../../lib/logger';
 import type { FlowIntensity, PeriodData } from '../../lib/types';
 import { startOfDay } from '../../lib/predictions';
@@ -26,6 +30,8 @@ export function PeriodLogForm({
 }: PeriodLogFormProps) {
   const { addRecord, updateRecord, deleteRecord, refresh } = useRecords();
   const { startNewCycle, currentCycle } = useCycles();
+  const { showToast } = useToast();
+  const { formatLong } = useDateFormat();
   const [flowIntensity, setFlowIntensity] = useState<FlowIntensity | null>(
     existingRecord?.data.flowIntensity ?? null
   );
@@ -35,7 +41,7 @@ export function PeriodLogForm({
   const [startDate, setStartDate] = useState(format(new Date(date), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(date), 'yyyy-MM-dd'));
 
-  const dateLabel = format(new Date(date), 'MMMM d, yyyy');
+  const dateLabel = formatLong(date);
   const normalizedDate = startOfDay(date);
 
   const handleSave = async () => {
@@ -81,7 +87,7 @@ export function PeriodLogForm({
 
         // Validate date range
         if (start > end) {
-          logger.error('Start date must be before end date');
+          showToast('The start date must be on or before the end date.', 'error');
           return;
         }
 
@@ -118,9 +124,11 @@ export function PeriodLogForm({
         await refresh();
       }
 
+      showToast(existingRecord ? 'Period updated' : 'Period logged');
       handleClose();
     } catch (error) {
       logger.error('Failed to save period log:', error);
+      showToast("Couldn't save your entry. Please try again.", 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -132,9 +140,11 @@ export function PeriodLogForm({
     setIsSubmitting(true);
     try {
       await deleteRecord(existingRecord.id);
+      showToast('Entry deleted');
       handleClose();
     } catch (error) {
       logger.error('Failed to delete period log:', error);
+      showToast("Couldn't delete your entry. Please try again.", 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -149,7 +159,7 @@ export function PeriodLogForm({
   };
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={handleClose} title="Log Period">
+    <BottomSheet isOpen={isOpen} onClose={handleClose} title={existingRecord ? 'Edit Period' : 'Log Period'}>
       <div className="space-y-4">
         {!existingRecord && (
           <>
@@ -190,6 +200,8 @@ export function PeriodLogForm({
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
+                    onClick={openDatePicker}
+                    onFocus={openDatePicker}
                     className="mt-1 w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-colors duration-200"
                   />
                 </div>
@@ -199,6 +211,8 @@ export function PeriodLogForm({
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
+                    onClick={openDatePicker}
+                    onFocus={openDatePicker}
                     className="mt-1 w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-colors duration-200"
                   />
                 </div>
@@ -225,33 +239,14 @@ export function PeriodLogForm({
           />
         </div>
 
-        <div className={`flex gap-2 sm:gap-3 pt-4 ${existingRecord ? 'flex-col sm:flex-row' : 'flex-col sm:flex-row'}`}>
-          {existingRecord && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isSubmitting}
-              className="w-full sm:auto px-4 py-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 text-sm transition-colors duration-200"
-            >
-              Delete
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-sm transition-colors duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!flowIntensity || isSubmitting || (mode === 'multi' && (!startDate || !endDate))}
-            className="flex-1 px-4 py-2 text-white bg-rose-500 rounded-lg hover:bg-rose-600 disabled:opacity-50 text-sm transition-colors duration-200"
-          >
-            {isSubmitting ? 'Saving...' : 'Save'}
-          </button>
-        </div>
+        <LogFormActions
+          onSave={handleSave}
+          onCancel={handleClose}
+          onDelete={existingRecord ? handleDelete : undefined}
+          canSave={Boolean(flowIntensity) && !(mode === 'multi' && (!startDate || !endDate))}
+          isSubmitting={isSubmitting}
+          saveClassName="bg-rose-500 hover:bg-rose-600"
+        />
       </div>
     </BottomSheet>
   );

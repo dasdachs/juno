@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
 import { BottomSheet } from '../common/BottomSheet';
+import { LogFormActions } from './LogFormActions';
 import { useRecords } from '../../hooks/useRecords';
+import { useToast } from '../../contexts/ToastContext';
+import { useDateFormat } from '../../contexts/DateFormatContext';
 import { logger } from '../../lib/logger';
 import type { NoteData } from '../../lib/types';
 import { startOfDay } from '../../lib/predictions';
@@ -23,11 +25,13 @@ export function NoteLogForm({
   existingRecord,
 }: NoteLogFormProps) {
   const { addRecord, updateRecord, deleteRecord } = useRecords();
+  const { showToast } = useToast();
+  const { formatLong } = useDateFormat();
   const [title, setTitle] = useState(existingRecord?.data.title ?? '');
   const [content, setContent] = useState(existingRecord?.data.content ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const dateLabel = format(new Date(date), 'MMMM d, yyyy');
+  const dateLabel = formatLong(date);
   const normalizedDate = startOfDay(date);
 
   const handleSave = async () => {
@@ -51,9 +55,11 @@ export function NoteLogForm({
         });
       }
 
+      showToast(existingRecord ? 'Note updated' : 'Note saved');
       onClose();
     } catch (error) {
       logger.error('Failed to save note:', error);
+      showToast("Couldn't save your note. Please try again.", 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -65,16 +71,18 @@ export function NoteLogForm({
     setIsSubmitting(true);
     try {
       await deleteRecord(existingRecord.id);
+      showToast('Note deleted');
       onClose();
     } catch (error) {
       logger.error('Failed to delete note:', error);
+      showToast("Couldn't delete your note. Please try again.", 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} title="Add Note">
+    <BottomSheet isOpen={isOpen} onClose={onClose} title={existingRecord ? 'Edit Note' : 'Add Note'}>
       <div className="space-y-4">
         <p className="text-sm text-gray-500 dark:text-gray-400">{dateLabel}</p>
 
@@ -100,33 +108,14 @@ export function NoteLogForm({
           />
         </div>
 
-        <div className={`flex gap-2 sm:gap-3 pt-4 ${existingRecord ? 'flex-col sm:flex-row' : 'flex-col sm:flex-row'}`}>
-          {existingRecord && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isSubmitting}
-              className="w-full sm:auto px-4 py-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 text-sm transition-colors duration-200"
-            >
-              Delete
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-sm transition-colors duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!content.trim() || isSubmitting}
-            className="flex-1 px-4 py-2 text-white bg-gray-700 dark:bg-gray-600 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 text-sm transition-colors duration-200"
-          >
-            {isSubmitting ? 'Saving...' : 'Save'}
-          </button>
-        </div>
+        <LogFormActions
+          onSave={handleSave}
+          onCancel={onClose}
+          onDelete={existingRecord ? handleDelete : undefined}
+          canSave={Boolean(content.trim())}
+          isSubmitting={isSubmitting}
+          saveClassName="bg-gray-700 dark:bg-gray-600 hover:bg-gray-800 dark:hover:bg-gray-700"
+        />
       </div>
     </BottomSheet>
   );

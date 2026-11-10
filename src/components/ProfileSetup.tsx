@@ -4,6 +4,8 @@ import { useProfile } from '../hooks/useProfile';
 import { useCycles } from '../hooks/useCycles';
 import { logger } from '../lib/logger';
 import { format, subDays } from 'date-fns';
+import { useDateFormat } from '../contexts/DateFormatContext';
+import { openDatePicker } from '../lib/dateFormat';
 
 type SetupStep = 'welcome' | 'birth-year' | 'cycle-length' | 'period-length' | 'week-start' | 'last-period';
 
@@ -477,6 +479,7 @@ function LastPeriodStep({
   onBack: () => void;
   isSubmitting: boolean;
 }) {
+  const { formatLong } = useDateFormat();
   const today = new Date();
   const maxDate = format(today, 'yyyy-MM-dd');
   const minDate = format(subDays(today, 90), 'yyyy-MM-dd');
@@ -508,6 +511,8 @@ function LastPeriodStep({
           type="date"
           value={value ? format(new Date(value), 'yyyy-MM-dd') : ''}
           onChange={(e) => handleDateChange(e.target.value)}
+          onClick={openDatePicker}
+          onFocus={openDatePicker}
           max={maxDate}
           min={minDate}
           className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl text-lg focus:ring-2 focus:ring-rose-500 transition-colors duration-200"
@@ -517,7 +522,7 @@ function LastPeriodStep({
       {value && (
         <div className="bg-rose-50 dark:bg-rose-950 rounded-xl p-4 mb-6">
           <p className="text-sm text-rose-700 dark:text-rose-400">
-            Selected: <strong>{format(new Date(value), 'MMMM d, yyyy')}</strong>
+            Selected: <strong>{formatLong(value)}</strong>
           </p>
         </div>
       )}

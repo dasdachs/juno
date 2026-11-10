@@ -216,14 +216,13 @@ export interface AppSettings {
   lastUnlockedAt?: number;
   periodReminderEnabled: boolean;
   periodReminderDays: number;
-  oauthEnabled?: boolean;
-  oauthProvider?: 'google' | null;
-  oauthUserId?: string | null;
   autoLockOnHidden: boolean;
   autoLockGracePeriod: number;
   deviceId?: string;
   syncAdapter?: string;
   lastSyncAt?: number;
+  /** Undefined for settings created before this field existed; DateFormatContext infers and backfills it. */
+  dateFormat?: 'us' | 'international' | 'iso';
 }
 
 // ============================================

@@ -1,10 +1,12 @@
 import { usePredictions } from '../hooks/usePredictions';
 import { useCycles } from '../hooks/useCycles';
+import { useDateFormat } from '../contexts/DateFormatContext';
 import { TrendingUp, Calendar, Activity, Target } from 'lucide-react';
 
 export function InsightsPage() {
   const { prediction, currentCycleDay, daysUntilPeriod, statistics } = usePredictions();
   const { cycles } = useCycles();
+  const { formatShort } = useDateFormat();
 
   const hasData = cycles.length > 0;
 
@@ -140,7 +142,7 @@ export function InsightsPage() {
                         Cycle {cycle.cycleNumber}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Started {new Date(cycle.startDate).toLocaleDateString()}
+                        Started {formatShort(cycle.startDate)}
                       </p>
                     </div>
                     <div className="text-right">

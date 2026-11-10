@@ -25,6 +25,24 @@ vi.mock('../../lib/logger', () => ({
   },
 }));
 
+const mockShowToast = vi.fn();
+vi.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+
+vi.mock('../../contexts/DateFormatContext', async () => {
+  const { formatLongDate, formatShortDate } = await import('../../lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      dateFormat: 'us',
+      setDateFormat: vi.fn(),
+      formatLong: (date: Date | number, withWeekday?: boolean) =>
+        formatLongDate(date, 'us', withWeekday),
+      formatShort: (date: Date | number) => formatShortDate(date, 'us'),
+    }),
+  };
+});
+
 describe('NoteLogForm', () => {
   const defaultProps = {
     isOpen: true,
@@ -203,8 +221,9 @@ describe('NoteLogForm', () => {
 
       render(<NoteLogForm {...defaultProps} existingRecord={existingRecord} />);
 
-      const deleteButton = screen.getByRole('button', { name: 'Delete' });
-      fireEvent.click(deleteButton);
+      // Deleting is a two-step confirmation
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm Delete' }));
 
       await waitFor(() => {
         expect(mockDeleteRecord).toHaveBeenCalledWith('test-id');
@@ -239,6 +258,62 @@ describe('NoteLogForm', () => {
 
       const noteInput = screen.getByPlaceholderText('Write your note...');
       expect(noteInput).toHaveValue('Existing note content');
+    });
+  });
+
+  describe('user feedback', () => {
+    it('should confirm a successful save', async () => {
+      render(<NoteLogForm {...defaultProps} />);
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note...'), {
+        target: { value: 'Some note' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith('Note saved');
+      });
+    });
+
+    it('should surface a save failure to the user instead of failing silently', async () => {
+      mockAddRecord.mockRejectedValueOnce(new Error('disk full'));
+
+      render(<NoteLogForm {...defaultProps} />);
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note...'), {
+        target: { value: 'Some note' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.stringContaining("Couldn't save"),
+          'error'
+        );
+      });
+      // The sheet stays open so the entry isn't lost
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
+    });
+
+    it('should surface a delete failure to the user', async () => {
+      mockDeleteRecord.mockRejectedValueOnce(new Error('nope'));
+
+      render(
+        <NoteLogForm
+          {...defaultProps}
+          existingRecord={{ id: 'test-id', data: { date: Date.now(), content: 'x' } }}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm Delete' }));
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.stringContaining("Couldn't delete"),
+          'error'
+        );
+      });
     });
   });
 });

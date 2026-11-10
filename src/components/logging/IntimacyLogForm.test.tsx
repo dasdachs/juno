@@ -25,6 +25,24 @@ vi.mock('../../lib/logger', () => ({
   },
 }));
 
+const mockShowToast = vi.fn();
+vi.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+
+vi.mock('../../contexts/DateFormatContext', async () => {
+  const { formatLongDate, formatShortDate } = await import('../../lib/dateFormat');
+  return {
+    useDateFormat: () => ({
+      dateFormat: 'us',
+      setDateFormat: vi.fn(),
+      formatLong: (date: Date | number, withWeekday?: boolean) =>
+        formatLongDate(date, 'us', withWeekday),
+      formatShort: (date: Date | number) => formatShortDate(date, 'us'),
+    }),
+  };
+});
+
 describe('IntimacyLogForm', () => {
   const defaultProps = {
     isOpen: true,
@@ -175,8 +193,9 @@ describe('IntimacyLogForm', () => {
 
       render(<IntimacyLogForm {...defaultProps} existingRecord={existingRecord} />);
 
-      const deleteButton = screen.getByRole('button', { name: 'Delete' });
-      fireEvent.click(deleteButton);
+      // Deleting is a two-step confirmation
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm Delete' }));
 
       await waitFor(() => {
         expect(mockDeleteRecord).toHaveBeenCalledWith('test-id');

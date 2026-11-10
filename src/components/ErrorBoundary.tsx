@@ -40,11 +40,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-          <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-6 text-center">
-            <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+            <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-8 h-8 text-rose-600"
+                className="w-8 h-8 text-rose-600 dark:text-rose-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -57,16 +57,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Something went wrong
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               We encountered an unexpected error. Your data is safe.
             </p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={this.handleReset}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
               >
                 Try Again
               </button>

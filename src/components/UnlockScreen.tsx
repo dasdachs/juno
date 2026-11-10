@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, Eye, EyeOff, Lock, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useIdentity } from '../contexts/IdentityContext';
 import { logger } from '../lib/logger';
 import zxcvbn from 'zxcvbn';
 
@@ -11,7 +10,6 @@ const LOCKOUT_THRESHOLD = 3;
 
 export function UnlockScreen() {
   const { hasVault, unlock, createNewVault } = useAuth();
-  const { user, isOAuthEnabled } = useIdentity();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -151,31 +149,6 @@ export function UnlockScreen() {
               : 'Create a password to secure your health data'}
           </p>
         </div>
-
-        {isOAuthEnabled && user && (
-          <div className="mb-4 flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            {user.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt=""
-                className="w-8 h-8 rounded-full"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900 flex items-center justify-center text-rose-600 dark:text-rose-400 font-medium text-sm">
-                {(user.displayName || user.email || '?')[0].toUpperCase()}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              {user.displayName && (
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.displayName}</p>
-              )}
-              {user.email && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-              )}
-            </div>
-          </div>
-        )}
 
         <form onSubmit={hasVault ? handleUnlock : handleCreate} className="space-y-4">
           <div>
