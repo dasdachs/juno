@@ -25,7 +25,7 @@ export function Select({ label, onChange, helper, hideLabel, children, id, ...re
       </select>
       {!hideLabel && <label htmlFor={fieldId}>{label}</label>}
       <Icon name="arrow_drop_down" />
-      {helper && <span className="helper">{helper}</span>}
+      {helper && <output>{helper}</output>}
     </div>
   );
 }

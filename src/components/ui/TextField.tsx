@@ -53,9 +53,9 @@ export function TextField(props: TextFieldProps) {
       </label>
       {trailing}
       {(error || helper) && (
-        <span id={`${fieldId}-help`} className={error ? 'error' : 'helper'} role={error ? 'alert' : undefined}>
+        <output id={`${fieldId}-help`} className={error ? 'invalid' : undefined} role={error ? 'alert' : undefined}>
           {error || helper}
-        </span>
+        </output>
       )}
     </div>
   );

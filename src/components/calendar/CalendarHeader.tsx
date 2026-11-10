@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, IconButton, Select } from '../ui';
+import { IconButton, Select } from '../ui';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -54,9 +54,7 @@ export function CalendarHeader({
         ))}
       </Select>
 
-      <Button variant="text" size="small" onClick={onToday}>
-        Today
-      </Button>
+      <IconButton icon="today" label="Today" onClick={onToday} />
 
       <IconButton icon="chevron_right" label="Next month" onClick={onNextMonth} />
     </div>

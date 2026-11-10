@@ -22,8 +22,8 @@ export function LogFormHost({ activeLog, onClose }: LogFormHostProps) {
 
   // Forms seed their state from props on mount, so each target needs its own
   // instance — keying on the record (or the date, when creating) remounts them.
+  const key = `${activeLog.type}:${activeLog.record?.id ?? activeLog.date}`;
   const shared = {
-    key: `${activeLog.type}:${activeLog.record?.id ?? activeLog.date}`,
     isOpen: true,
     onClose,
     date: activeLog.date,
@@ -31,15 +31,15 @@ export function LogFormHost({ activeLog, onClose }: LogFormHostProps) {
 
   switch (activeLog.type) {
     case 'period':
-      return <PeriodLogForm {...shared} existingRecord={asExisting<PeriodData>(activeLog.record)} />;
+      return <PeriodLogForm key={key} {...shared} existingRecord={asExisting<PeriodData>(activeLog.record)} />;
     case 'symptom':
-      return <SymptomLogForm {...shared} existingRecord={asExisting<SymptomData>(activeLog.record)} />;
+      return <SymptomLogForm key={key} {...shared} existingRecord={asExisting<SymptomData>(activeLog.record)} />;
     case 'mood':
-      return <MoodLogForm {...shared} existingRecord={asExisting<MoodData>(activeLog.record)} />;
+      return <MoodLogForm key={key} {...shared} existingRecord={asExisting<MoodData>(activeLog.record)} />;
     case 'intimacy':
-      return <IntimacyLogForm {...shared} existingRecord={asExisting<IntimacyData>(activeLog.record)} />;
+      return <IntimacyLogForm key={key} {...shared} existingRecord={asExisting<IntimacyData>(activeLog.record)} />;
     case 'note':
-      return <NoteLogForm {...shared} existingRecord={asExisting<NoteData>(activeLog.record)} />;
+      return <NoteLogForm key={key} {...shared} existingRecord={asExisting<NoteData>(activeLog.record)} />;
     default:
       return null;
   }

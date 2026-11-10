@@ -54,7 +54,7 @@ describe('SettingsPage preferences', () => {
 
     await waitFor(() => expect(screen.getByText('Date Format')).toBeInTheDocument());
 
-    expect(screen.getByRole('button', { name: /^US/ })).toHaveClass('bg-rose-500');
+    expect(screen.getByRole('button', { name: /^US/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('calls setDateFormat when a different style is chosen', async () => {

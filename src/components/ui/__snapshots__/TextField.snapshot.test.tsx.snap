@@ -77,12 +77,11 @@ exports[`TextField > renders helper text 1`] = `
     >
       Password
     </label>
-    <span
-      class="helper"
+    <output
       id="pw-help"
     >
       At least 12 characters
-    </span>
+    </output>
   </div>
 </DocumentFragment>
 `;
@@ -104,13 +103,13 @@ exports[`TextField > renders the invalid state with an error message 1`] = `
     >
       Password
     </label>
-    <span
-      class="error"
+    <output
+      class="invalid"
       id="pw-help"
       role="alert"
     >
       Passwords do not match
-    </span>
+    </output>
   </div>
 </DocumentFragment>
 `;

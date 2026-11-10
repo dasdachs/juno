@@ -63,6 +63,15 @@ Each record stores encrypted JSON containing typed data (`PeriodData`, `Intimacy
 - **Pages**: Calendar (default), Insights, History, Settings, Profile
 - **Components**: Calendar grid, logging forms (Period, Mood, Symptom, Intimacy, Note), common pickers
 
+### UI: Material Design 3 via BeerCSS
+
+- BeerCSS 5 is the only styling layer (no Tailwind, no `lucide-react`); only its CSS is imported, not its JS
+- `src/components/ui/` holds the props-only core components (Button, TextField, BottomSheet, List, ...), each with a `*.snapshot.test.tsx`; screens compose these rather than styling raw elements
+- Icons are Material Symbols ligatures via `<Icon name="..." />`; the font is bundled locally and `vite.beerFonts.ts` strips BeerCSS's CDN fallback (no remote resources)
+- Colours come only from the MD3 tokens in `src/styles/theme.css` (rose-seeded, light/dark via a class on `<body>`); never hard-code a colour
+- App-specific CSS lives in `src/styles/*.css`, imported from `main.tsx`
+- UI files (components, pages) stay at 80 lines or fewer; split into small, semantically named pieces. Tests and CSS may be longer
+
 ### PWA Configuration
 
 Configured in `vite.config.ts` with `vite-plugin-pwa`:
