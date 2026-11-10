@@ -2,7 +2,6 @@ export interface SyncMetadata {
   deviceId: string;
   timestamp: number;
   version: number;
-  recordCount: number;
 }
 
 export interface SyncResult {

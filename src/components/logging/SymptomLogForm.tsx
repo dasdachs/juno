@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { SymptomPicker } from '../common/SymptomPicker';
-import { BottomSheet } from '../common/BottomSheet';
+import { BottomSheet } from '../ui';
 import { LogFormActions } from './LogFormActions';
-import { useRecords } from '../../hooks/useRecords';
-import { useToast } from '../../contexts/ToastContext';
+import { NotesField } from './NotesField';
+import { useLogSubmit } from './useLogSubmit';
 import { useDateFormat } from '../../contexts/DateFormatContext';
-import { logger } from '../../lib/logger';
 import type { SymptomEntry, SymptomData } from '../../lib/types';
 import { startOfDay } from '../../lib/predictions';
 
@@ -19,96 +18,34 @@ interface SymptomLogFormProps {
   };
 }
 
-export function SymptomLogForm({
-  isOpen,
-  onClose,
-  date,
-  existingRecord,
-}: SymptomLogFormProps) {
-  const { addRecord, updateRecord, deleteRecord } = useRecords();
-  const { showToast } = useToast();
+export function SymptomLogForm({ isOpen, onClose, date, existingRecord }: SymptomLogFormProps) {
   const { formatLong } = useDateFormat();
-  const [symptoms, setSymptoms] = useState<SymptomEntry[]>(
-    existingRecord?.data.symptoms ?? []
-  );
+  const [symptoms, setSymptoms] = useState<SymptomEntry[]>(existingRecord?.data.symptoms ?? []);
   const [notes, setNotes] = useState(existingRecord?.data.notes ?? '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const canSave = symptoms.length > 0;
 
-  const dateLabel = formatLong(date);
-  const normalizedDate = startOfDay(date);
-
-  const handleSave = async () => {
-    if (symptoms.length === 0) return;
-
-    setIsSubmitting(true);
-    try {
-      const data: SymptomData = {
-        date: normalizedDate,
-        symptoms,
-        notes: notes.trim() || undefined,
-      };
-
-      if (existingRecord) {
-        await updateRecord(existingRecord.id, { data });
-      } else {
-        await addRecord({
-          type: 'symptom',
-          data,
-          tags: [],
-        });
-      }
-
-      showToast(existingRecord ? 'Symptoms updated' : 'Symptoms saved');
-      onClose();
-    } catch (error) {
-      logger.error('Failed to save symptom log:', error);
-      showToast("Couldn't save your entry. Please try again.", 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!existingRecord) return;
-
-    setIsSubmitting(true);
-    try {
-      await deleteRecord(existingRecord.id);
-      showToast('Entry deleted');
-      onClose();
-    } catch (error) {
-      logger.error('Failed to delete symptom log:', error);
-      showToast("Couldn't delete your entry. Please try again.", 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const { isSubmitting, handleSave, handleDelete } = useLogSubmit({
+    type: 'symptom',
+    existingId: existingRecord?.id,
+    canSave,
+    getData: (): SymptomData => ({ date: startOfDay(date), symptoms, notes: notes.trim() || undefined }),
+    savedToast: existingRecord ? 'Symptoms updated' : 'Symptoms saved',
+    logName: 'symptom log',
+    onClose,
+  });
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title={existingRecord ? 'Edit Symptoms' : 'Log Symptoms'}>
-      <div className="space-y-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{dateLabel}</p>
-
+      <div className="stack">
+        <p className="supporting">{formatLong(date)}</p>
         <SymptomPicker value={symptoms} onChange={setSymptoms} />
-
-        <div>
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="mt-1 w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors duration-200"
-            rows={3}
-            placeholder="Any additional notes..."
-          />
-        </div>
-
+        <NotesField value={notes} onChange={setNotes} />
         <LogFormActions
           onSave={handleSave}
           onCancel={onClose}
-          onDelete={existingRecord ? handleDelete : undefined}
-          canSave={symptoms.length > 0}
+          onDelete={handleDelete}
+          canSave={canSave}
           isSubmitting={isSubmitting}
-          saveClassName="bg-amber-500 hover:bg-amber-600"
         />
       </div>
     </BottomSheet>

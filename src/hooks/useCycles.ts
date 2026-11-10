@@ -5,6 +5,7 @@ import {
   encryptCycleData,
   decryptCycleData,
   isUnlocked,
+  toCycleTombstone,
 } from '../lib/crypto';
 import type { CycleData } from '../lib/types';
 import { startOfDay } from '../lib/predictions';
@@ -38,10 +39,19 @@ export function useCycles(): UseCyclesReturn {
       setIsLoading(true);
       setError(null);
 
-      const encryptedCycles = await db.cycles.orderBy('startDate').toArray();
-      const decryptedCycles = encryptedCycles.map((encrypted) =>
-        decryptCycleData(encrypted)
-      );
+      // Start dates exist only inside the ciphertext; order after decryption.
+      const encryptedCycles = await db.cycles.toArray();
+      const decryptedCycles = encryptedCycles
+        .map((encrypted) => {
+          try {
+            return decryptCycleData(encrypted);
+          } catch {
+            // Skip cycles that can't be decrypted
+            return null;
+          }
+        })
+        .filter((cycle): cycle is CycleData => cycle !== null && !cycle.deletedAt)
+        .sort((a, b) => a.startDate - b.startDate);
 
       setCycles(decryptedCycles);
     } catch (err) {
@@ -154,7 +164,9 @@ export function useCycles(): UseCyclesReturn {
         throw new Error('Vault is locked');
       }
 
-      await db.cycles.delete(id);
+      // Keep a content-free tombstone so a later backup merge or sync cannot
+      // bring the deleted cycle back.
+      await db.cycles.put(encryptCycleData(toCycleTombstone(id, Date.now())));
       await loadCycles();
     },
     [loadCycles]

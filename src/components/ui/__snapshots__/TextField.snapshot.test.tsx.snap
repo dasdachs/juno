@@ -1,0 +1,116 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TextField > keeps the label floated for date inputs 1`] = `
+<DocumentFragment>
+  <div
+    class="field label border"
+  >
+    <input
+      class="active"
+      id="d"
+      placeholder=" "
+      type="date"
+      value="2024-03-15"
+    />
+    <label
+      class="active"
+      for="d"
+    >
+      Start date
+    </label>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`TextField > renders a multiline field 1`] = `
+<DocumentFragment>
+  <div
+    class="field label border textarea"
+  >
+    <textarea
+      id="notes"
+      placeholder=" "
+      rows="3"
+    />
+    <label
+      for="notes"
+    >
+      Notes
+    </label>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`TextField > renders an outlined field with a floating label 1`] = `
+<DocumentFragment>
+  <div
+    class="field label border"
+  >
+    <input
+      id="name"
+      placeholder=" "
+      value=""
+    />
+    <label
+      for="name"
+    >
+      Name
+    </label>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`TextField > renders helper text 1`] = `
+<DocumentFragment>
+  <div
+    class="field label border"
+  >
+    <input
+      aria-describedby="pw-help"
+      id="pw"
+      placeholder=" "
+      type="password"
+      value=""
+    />
+    <label
+      for="pw"
+    >
+      Password
+    </label>
+    <span
+      class="helper"
+      id="pw-help"
+    >
+      At least 12 characters
+    </span>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`TextField > renders the invalid state with an error message 1`] = `
+<DocumentFragment>
+  <div
+    class="field label border invalid"
+  >
+    <input
+      aria-describedby="pw-help"
+      aria-invalid="true"
+      id="pw"
+      placeholder=" "
+      value="x"
+    />
+    <label
+      for="pw"
+    >
+      Password
+    </label>
+    <span
+      class="error"
+      id="pw-help"
+      role="alert"
+    >
+      Passwords do not match
+    </span>
+  </div>
+</DocumentFragment>
+`;

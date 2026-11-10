@@ -1,5 +1,7 @@
 import type { SymptomType, SymptomSeverity, SymptomEntry } from '../../lib/types';
-import { SYMPTOM_TYPE_LABELS, SEVERITY_LABELS } from '../../lib/types';
+import { SYMPTOM_TYPE_LABELS } from '../../lib/types';
+import { Chip } from '../ui';
+import { SymptomSeverityList } from './SymptomSeverityList';
 
 interface SymptomPickerProps {
   value: SymptomEntry[];
@@ -35,67 +37,20 @@ export function SymptomPicker({ value, onChange }: SymptomPickerProps) {
   };
 
   const updateSeverity = (type: SymptomType, severity: SymptomSeverity) => {
-    onChange(
-      value.map((s) => (s.type === type ? { ...s, severity } : s))
-    );
+    onChange(value.map((s) => (s.type === type ? { ...s, severity } : s)));
   };
 
   return (
-    <div className="space-y-3">
-      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Symptoms</label>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-        {SYMPTOM_OPTIONS.map((symptom) => {
-          const isSelected = selectedSymptoms.has(symptom);
-
-          return (
-            <button
-              key={symptom}
-              type="button"
-              onClick={() => toggleSymptom(symptom)}
-              className={`py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm transition-colors duration-200 ${
-                isSelected
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50'
-              }`}
-            >
-              {SYMPTOM_TYPE_LABELS[symptom]}
-            </button>
-          );
-        })}
+    <div className="stack tight">
+      <p className="picker-label">Symptoms</p>
+      <div className="chip-set">
+        {SYMPTOM_OPTIONS.map((symptom) => (
+          <Chip key={symptom} selected={selectedSymptoms.has(symptom)} onClick={() => toggleSymptom(symptom)}>
+            {SYMPTOM_TYPE_LABELS[symptom]}
+          </Chip>
+        ))}
       </div>
-
-      {/* Severity controls for selected symptoms */}
-      {value.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Severity</label>
-          {value.map((entry) => (
-            <div
-              key={entry.type}
-              className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-lg"
-            >
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                {SYMPTOM_TYPE_LABELS[entry.type]}
-              </span>
-              <div className="flex gap-1">
-                {([1, 2, 3] as SymptomSeverity[]).map((severity) => (
-                  <button
-                    key={severity}
-                    type="button"
-                    onClick={() => updateSeverity(entry.type, severity)}
-                    className={`px-3 py-1 rounded text-xs transition-colors duration-200 ${
-                      entry.severity === severity
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50'
-                    }`}
-                  >
-                    {SEVERITY_LABELS[severity]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {value.length > 0 && <SymptomSeverityList symptoms={value} onChange={updateSeverity} />}
     </div>
   );
 }

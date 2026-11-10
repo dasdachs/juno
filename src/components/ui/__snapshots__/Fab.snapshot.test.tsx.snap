@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Fab > renders an extended FAB with a label 1`] = `
+<DocumentFragment>
+  <button
+    class="fab primary-container extended"
+    type="button"
+  >
+    <i
+      aria-hidden="true"
+    >
+      add
+    </i>
+    <span>
+      Log today
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Fab > renders an icon-only FAB 1`] = `
+<DocumentFragment>
+  <button
+    aria-label="Add entry"
+    class="fab primary-container square"
+    type="button"
+  >
+    <i
+      aria-hidden="true"
+    >
+      add
+    </i>
+  </button>
+</DocumentFragment>
+`;

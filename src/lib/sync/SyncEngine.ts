@@ -9,14 +9,40 @@ import {
   encryptCycleData,
   encryptUserProfile,
   generateId,
+  isUnlocked,
+  isVaultKeyCurrent,
+  scrubIfDeleted,
+  scrubCycleIfDeleted,
+  sealWithPassword,
+  openWithPassword,
+  type PasswordSealed,
 } from '../crypto';
+import { readVault } from '../exportImport';
+import { assertValidPayload } from '../payloadValidation';
 import type { SyncAdapter, SyncMetadata } from './types';
 import type { HealthRecord, CycleData, UserProfile } from '../types';
+
+// v3: payload is passphrase-encrypted. v2 files were plaintext and are refused.
+const SYNC_FORMAT_VERSION = 3;
 
 interface SyncPayload {
   records: HealthRecord[];
   cycles: CycleData[];
   profile: UserProfile | null;
+}
+
+/**
+ * Decrypt a local row for comparison. A local row that cannot be read is
+ * treated as absent (the remote copy replaces it) instead of blocking every
+ * future pull.
+ */
+function readLocal<E, T>(decrypt: (row: E) => T, row: E): T | null {
+  try {
+    return decrypt(row);
+  } catch (error) {
+    if (!isUnlocked()) throw error;
+    return null;
+  }
 }
 
 export class SyncEngine {
@@ -38,40 +64,38 @@ export class SyncEngine {
     return deviceId;
   }
 
-  async push(): Promise<void> {
+  /**
+   * Write all data to the adapter, encrypted under `passphrase`.
+   * The sync file leaves the device, so it must never contain plaintext.
+   */
+  async push(passphrase: string): Promise<{ unreadable: number }> {
+    if (!passphrase) {
+      throw new Error('A sync passphrase is required');
+    }
+
     await initCrypto();
 
-    // Gather all decrypted data
-    const encryptedRecords = await db.records.toArray();
-    const records: HealthRecord[] = encryptedRecords.map((er) => decryptRecord(er));
-
-    const encryptedCycles = await db.cycles.toArray();
-    const cycles: CycleData[] = encryptedCycles.map((ec) => decryptCycleData(ec));
-
-    const encryptedProfile = await db.userProfile.get('primary');
-    const profile = encryptedProfile ? decryptUserProfile(encryptedProfile) : null;
-
+    // Gather all decrypted data (unreadable rows are skipped and counted)
+    const { records, cycles, profile, unreadable } = await readVault();
     const payload: SyncPayload = { records, cycles, profile };
 
-    // Serialize payload
-    const plaintext = sodium.from_string(JSON.stringify(payload));
-
-    // Simple approach: just serialize as JSON (data is already encrypted per-record via HKDF)
-    const blob = new Uint8Array(plaintext);
+    // Encrypt the whole payload under the passphrase (Argon2id + secretbox)
+    const sealed = await sealWithPassword(JSON.stringify(payload), passphrase);
+    const blob = new Uint8Array(sodium.from_string(JSON.stringify(sealed)));
 
     const deviceId = await this.getDeviceId();
     const metadata: SyncMetadata = {
       deviceId,
       timestamp: Date.now(),
-      version: 2,
-      recordCount: records.length,
+      version: SYNC_FORMAT_VERSION,
     };
 
     await this.adapter.upload(blob, metadata);
     await updateSettings({ lastSyncAt: Date.now() });
+    return { unreadable };
   }
 
-  async pull(): Promise<{
+  async pull(passphrase: string): Promise<{
     recordsAdded: number;
     recordsUpdated: number;
     cyclesAdded: number;
@@ -93,9 +117,26 @@ export class SyncEngine {
       };
     }
 
+    if (result.metadata.version !== SYNC_FORMAT_VERSION) {
+      throw new Error('Unsupported sync file format');
+    }
+
     // Decrypt payload
-    const plaintext = sodium.to_string(result.data);
-    const payload = JSON.parse(plaintext) as SyncPayload;
+    let payload: SyncPayload;
+    try {
+      const sealed = JSON.parse(sodium.to_string(result.data)) as PasswordSealed;
+      payload = JSON.parse(await openWithPassword(sealed, passphrase)) as SyncPayload;
+    } catch {
+      throw new Error('Incorrect sync passphrase or corrupted sync file');
+    }
+    if (!(await isVaultKeyCurrent())) {
+      throw new Error('Vault is locked');
+    }
+    try {
+      assertValidPayload(payload);
+    } catch {
+      throw new Error('Sync file contents are invalid');
+    }
 
     let recordsAdded = 0;
     let recordsUpdated = 0;
@@ -105,71 +146,81 @@ export class SyncEngine {
 
     const deviceId = await this.getDeviceId();
 
-    // Merge records (last-write-wins, local wins on tie)
-    for (const remoteRecord of payload.records) {
-      const existingEncrypted = await db.records.get(remoteRecord.id);
+    // One transaction: the merge applies completely or not at all.
+    await db.transaction('rw', db.records, db.cycles, db.userProfile, async () => {
+      // Merge records (last-write-wins, local wins on tie)
+      for (const incoming of payload.records) {
+        // A deleted record must never bring its content back with it
+        const remoteRecord = scrubIfDeleted(incoming);
+        const existingEncrypted = await db.records.get(remoteRecord.id);
+        const existingRecord = existingEncrypted && readLocal(decryptRecord, existingEncrypted);
 
-      if (!existingEncrypted) {
-        // New record
-        const encrypted = encryptRecord(remoteRecord);
-        await db.records.put(encrypted);
-        recordsAdded++;
-      } else {
-        const existingRecord = decryptRecord(existingEncrypted);
-
-        if (remoteRecord.updatedAt > existingRecord.updatedAt) {
-          // Remote is newer
+        if (!existingRecord) {
+          // New record (or the local copy is unreadable)
           const encrypted = encryptRecord(remoteRecord);
           await db.records.put(encrypted);
-          recordsUpdated++;
-        } else if (
-          remoteRecord.updatedAt === existingRecord.updatedAt &&
-          result.metadata.deviceId !== deviceId
-        ) {
-          // Tie: keep local (conservative)
-          continue;
+          recordsAdded++;
+        } else {
+          if (remoteRecord.updatedAt > existingRecord.updatedAt) {
+            // Remote is newer
+            const encrypted = encryptRecord(remoteRecord);
+            await db.records.put(encrypted);
+            recordsUpdated++;
+          } else if (
+            remoteRecord.updatedAt === existingRecord.updatedAt &&
+            result.metadata.deviceId !== deviceId
+          ) {
+            // Tie: keep local (conservative)
+            continue;
+          }
         }
       }
-    }
 
-    // Merge cycles
-    for (const remoteCycle of payload.cycles) {
-      const existingEncrypted = await db.cycles.get(remoteCycle.id);
+      // Merge cycles
+      for (const incomingCycle of payload.cycles) {
+        const remoteCycle = scrubCycleIfDeleted(incomingCycle);
+        const existingEncrypted = await db.cycles.get(remoteCycle.id);
+        const existingCycle = existingEncrypted && readLocal(decryptCycleData, existingEncrypted);
 
-      if (!existingEncrypted) {
-        const encrypted = encryptCycleData(remoteCycle);
-        await db.cycles.put(encrypted);
-        cyclesAdded++;
-      } else {
-        const existingCycle = decryptCycleData(existingEncrypted);
-
-        // Cycles don't have updatedAt, use startDate as proxy
-        if (remoteCycle.startDate > existingCycle.startDate) {
+        if (!existingCycle) {
           const encrypted = encryptCycleData(remoteCycle);
           await db.cycles.put(encrypted);
-          cyclesUpdated++;
+          cyclesAdded++;
+        } else {
+          if (existingCycle.deletedAt) {
+            // Deleted here: stays deleted
+            continue;
+          }
+
+          // A deletion always wins. Otherwise cycles have no updatedAt, so
+          // startDate is used as a proxy.
+          if (remoteCycle.deletedAt || remoteCycle.startDate > existingCycle.startDate) {
+            const encrypted = encryptCycleData(remoteCycle);
+            await db.cycles.put(encrypted);
+            cyclesUpdated++;
+          }
         }
       }
-    }
 
-    // Merge profile
-    if (payload.profile) {
-      const existingEncrypted = await db.userProfile.get(payload.profile.id);
+      // Merge profile
+      if (payload.profile) {
+        const existingEncrypted = await db.userProfile.get(payload.profile.id);
+        const existingProfile =
+          existingEncrypted && readLocal(decryptUserProfile, existingEncrypted);
 
-      if (!existingEncrypted) {
-        const encrypted = encryptUserProfile(payload.profile);
-        await db.userProfile.put(encrypted);
-        profileUpdated = true;
-      } else {
-        const existingProfile = decryptUserProfile(existingEncrypted);
-
-        if (payload.profile.updatedAt > existingProfile.updatedAt) {
+        if (!existingProfile) {
           const encrypted = encryptUserProfile(payload.profile);
           await db.userProfile.put(encrypted);
           profileUpdated = true;
+        } else {
+          if (payload.profile.updatedAt > existingProfile.updatedAt) {
+            const encrypted = encryptUserProfile(payload.profile);
+            await db.userProfile.put(encrypted);
+            profileUpdated = true;
+          }
         }
       }
-    }
+    });
 
     await updateSettings({ lastSyncAt: Date.now() });
 

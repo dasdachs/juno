@@ -4,31 +4,9 @@ import { SymptomLogForm } from './SymptomLogForm';
 import { MoodLogForm } from './MoodLogForm';
 import { IntimacyLogForm } from './IntimacyLogForm';
 import { NoteLogForm } from './NoteLogForm';
-import type {
-  HealthRecord,
-  RecordType,
-  PeriodData,
-  SymptomData,
-  MoodData,
-  IntimacyData,
-  NoteData,
-} from '../../lib/types';
-
-interface ActiveLog {
-  type: RecordType;
-  date: number;
-  /** Present when editing an existing entry rather than creating a new one. */
-  record?: HealthRecord;
-}
-
-/** Narrows a record to the `{ id, data }` shape the log forms expect. */
-function asExisting<T>(record: HealthRecord | undefined) {
-  return record ? { id: record.id, data: record.data as T } : undefined;
-}
-
-function recordDate(record: HealthRecord): number {
-  return (record.data as { date?: number }).date ?? record.createdAt;
-}
+import { asExisting, recordDate, type ActiveLog } from './activeLog';
+import type { HealthRecord, RecordType } from '../../lib/types';
+import type { PeriodData, SymptomData, MoodData, IntimacyData, NoteData } from '../../lib/types';
 
 interface LogFormHostProps {
   activeLog: ActiveLog | null;

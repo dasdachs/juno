@@ -1,0 +1,112 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Notice > renders a title above the message 1`] = `
+<DocumentFragment>
+  <article
+    class="no-elevate notice tertiary-container"
+  >
+    <i
+      aria-hidden="true"
+    >
+      warning
+    </i>
+    <div
+      class="max"
+    >
+      <div
+        class="headline"
+      >
+        No recovery
+      </div>
+      <div>
+        There is no password reset.
+      </div>
+    </div>
+  </article>
+</DocumentFragment>
+`;
+
+exports[`Notice > renders the error tone 1`] = `
+<DocumentFragment>
+  <article
+    class="no-elevate notice error-container"
+    role="alert"
+  >
+    <i
+      aria-hidden="true"
+    >
+      error
+    </i>
+    <div
+      class="max"
+    >
+      <div>
+        Something to know
+      </div>
+    </div>
+  </article>
+</DocumentFragment>
+`;
+
+exports[`Notice > renders the info tone 1`] = `
+<DocumentFragment>
+  <article
+    class="no-elevate notice secondary-container"
+  >
+    <i
+      aria-hidden="true"
+    >
+      info
+    </i>
+    <div
+      class="max"
+    >
+      <div>
+        Something to know
+      </div>
+    </div>
+  </article>
+</DocumentFragment>
+`;
+
+exports[`Notice > renders the success tone 1`] = `
+<DocumentFragment>
+  <article
+    class="no-elevate notice primary-container"
+  >
+    <i
+      aria-hidden="true"
+    >
+      check_circle
+    </i>
+    <div
+      class="max"
+    >
+      <div>
+        Something to know
+      </div>
+    </div>
+  </article>
+</DocumentFragment>
+`;
+
+exports[`Notice > renders the warning tone 1`] = `
+<DocumentFragment>
+  <article
+    class="no-elevate notice tertiary-container"
+  >
+    <i
+      aria-hidden="true"
+    >
+      warning
+    </i>
+    <div
+      class="max"
+    >
+      <div>
+        Something to know
+      </div>
+    </div>
+  </article>
+</DocumentFragment>
+`;

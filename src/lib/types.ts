@@ -133,6 +133,8 @@ export interface CycleData {
   periodEndDate?: number;
   periodLength?: number;
   cycleLength?: number;
+  /** Set on a deleted cycle; such a row is a content-free tombstone. */
+  deletedAt?: number;
 }
 
 // ============================================
@@ -174,10 +176,7 @@ export interface EncryptedRecord {
   id: string;
   nonce: string;
   ciphertext: string;
-  category: string;
-  cycleId?: string;
   version: number;
-  timestamp: number;
 }
 
 export interface EncryptedUserProfile {
@@ -191,7 +190,6 @@ export interface EncryptedCycleData {
   id: string;
   nonce: string;
   ciphertext: string;
-  startDate: number;
   version: number;
 }
 
@@ -213,7 +211,6 @@ export interface KeyStore {
 export interface AppSettings {
   id: string;
   sessionTimeout: number;
-  lastUnlockedAt?: number;
   periodReminderEnabled: boolean;
   periodReminderDays: number;
   autoLockOnHidden: boolean;

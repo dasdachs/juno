@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { User } from 'lucide-react';
+import { AVATAR_DATA_URL_PATTERN } from '../../lib/payloadValidation';
+import { Icon, cx } from '../ui';
 
 export type AvatarSize = 'sm' | 'md' | 'lg';
 
@@ -9,22 +10,10 @@ interface AvatarProps {
   size?: AvatarSize;
 }
 
-const CONTAINER_SIZE_CLASSES: Record<AvatarSize, string> = {
-  sm: 'w-8 h-8',
-  md: 'w-12 h-12',
-  lg: 'w-20 h-20',
-};
-
-const TEXT_SIZE_CLASSES: Record<AvatarSize, string> = {
-  sm: 'text-xs',
-  md: 'text-base',
-  lg: 'text-2xl',
-};
-
-const ICON_SIZE_CLASSES: Record<AvatarSize, string> = {
-  sm: 'w-4 h-4',
-  md: 'w-6 h-6',
-  lg: 'w-10 h-10',
+const ICON_SIZE: Record<AvatarSize, 'small' | 'medium' | 'extra'> = {
+  sm: 'small',
+  md: 'medium',
+  lg: 'extra',
 };
 
 function getInitials(name: string): string {
@@ -41,16 +30,14 @@ export function Avatar({ avatarUrl, name, size = 'md' }: AvatarProps) {
     setImageFailed(false);
   }, [avatarUrl]);
 
-  const containerClasses = `${CONTAINER_SIZE_CLASSES[size]} rounded-full flex items-center justify-center overflow-hidden shrink-0`;
-
-  if (avatarUrl && !imageFailed) {
+  // Only an image embedded in the encrypted profile is ever rendered. A remote
+  // URL would tell its server the user's IP and when they open the app.
+  if (avatarUrl && AVATAR_DATA_URL_PATTERN.test(avatarUrl) && !imageFailed) {
     return (
-      <div className={`${containerClasses} bg-gray-100 dark:bg-gray-800`}>
+      <div className={cx('avatar', size)}>
         <img
           src={avatarUrl}
           alt={name ? `${name}'s avatar` : 'Avatar'}
-          className="w-full h-full object-cover"
-          referrerPolicy="no-referrer"
           onError={() => setImageFailed(true)}
         />
       </div>
@@ -60,16 +47,12 @@ export function Avatar({ avatarUrl, name, size = 'md' }: AvatarProps) {
   const initials = name ? getInitials(name) : '';
 
   if (initials) {
-    return (
-      <div className={`${containerClasses} bg-rose-500 text-white font-medium ${TEXT_SIZE_CLASSES[size]}`}>
-        {initials}
-      </div>
-    );
+    return <div className={cx('avatar initials', size)}>{initials}</div>;
   }
 
   return (
-    <div className={`${containerClasses} bg-rose-100 dark:bg-rose-950`}>
-      <User className={`${ICON_SIZE_CLASSES[size]} text-rose-600 dark:text-rose-400`} />
+    <div className={cx('avatar placeholder', size)}>
+      <Icon name="person" size={ICON_SIZE[size]} />
     </div>
   );
 }

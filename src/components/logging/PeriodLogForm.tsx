@@ -1,16 +1,11 @@
-import { useState } from 'react';
-import { format, parse, eachDayOfInterval } from 'date-fns';
 import { FlowIntensityPicker } from '../common/FlowIntensityPicker';
-import { BottomSheet } from '../common/BottomSheet';
+import { BottomSheet, SegmentedButton } from '../ui';
 import { LogFormActions } from './LogFormActions';
-import { useRecords } from '../../hooks/useRecords';
-import { useCycles } from '../../hooks/useCycles';
-import { useToast } from '../../contexts/ToastContext';
+import { NotesField } from './NotesField';
+import { PeriodDateRange } from './PeriodDateRange';
+import { usePeriodLogForm, type PeriodLogMode } from './usePeriodLogForm';
 import { useDateFormat } from '../../contexts/DateFormatContext';
-import { openDatePicker } from '../../lib/dateFormat';
-import { logger } from '../../lib/logger';
-import type { FlowIntensity, PeriodData } from '../../lib/types';
-import { startOfDay } from '../../lib/predictions';
+import type { PeriodData } from '../../lib/types';
 
 interface PeriodLogFormProps {
   isOpen: boolean;
@@ -22,230 +17,40 @@ interface PeriodLogFormProps {
   };
 }
 
-export function PeriodLogForm({
-  isOpen,
-  onClose,
-  date,
-  existingRecord,
-}: PeriodLogFormProps) {
-  const { addRecord, updateRecord, deleteRecord, refresh } = useRecords();
-  const { startNewCycle, currentCycle } = useCycles();
-  const { showToast } = useToast();
+const MODES: Array<{ value: PeriodLogMode; label: string }> = [
+  { value: 'single', label: 'Single Day' },
+  { value: 'multi', label: 'Multiple Days' },
+];
+
+export function PeriodLogForm({ isOpen, onClose, date, existingRecord }: PeriodLogFormProps) {
   const { formatLong } = useDateFormat();
-  const [flowIntensity, setFlowIntensity] = useState<FlowIntensity | null>(
-    existingRecord?.data.flowIntensity ?? null
-  );
-  const [notes, setNotes] = useState(existingRecord?.data.notes ?? '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mode, setMode] = useState<'single' | 'multi'>('single');
-  const [startDate, setStartDate] = useState(format(new Date(date), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(date), 'yyyy-MM-dd'));
-
-  const dateLabel = formatLong(date);
-  const normalizedDate = startOfDay(date);
-
-  const handleSave = async () => {
-    if (!flowIntensity) return;
-
-    setIsSubmitting(true);
-    try {
-      if (existingRecord) {
-        // Only allow update in single mode
-        const data: PeriodData = {
-          date: normalizedDate,
-          flowIntensity,
-          notes: notes.trim() || undefined,
-        };
-        await updateRecord(existingRecord.id, { data });
-      } else if (mode === 'single') {
-        // Single day period
-        const data: PeriodData = {
-          date: normalizedDate,
-          flowIntensity,
-          notes: notes.trim() || undefined,
-        };
-
-        // Check if we need to start a new cycle
-        const isFirstPeriodLog = !currentCycle ||
-          (currentCycle && !currentCycle.periodEndDate &&
-           normalizedDate > currentCycle.startDate + 7 * 24 * 60 * 60 * 1000);
-
-        if (isFirstPeriodLog) {
-          await startNewCycle(normalizedDate);
-        }
-
-        await addRecord({
-          type: 'period',
-          data,
-          tags: [],
-        });
-      } else {
-        // Multi-day period
-        // Parse dates using date-fns to handle timezone properly
-        const start = parse(startDate, 'yyyy-MM-dd', new Date());
-        const end = parse(endDate, 'yyyy-MM-dd', new Date());
-
-        // Validate date range
-        if (start > end) {
-          showToast('The start date must be on or before the end date.', 'error');
-          return;
-        }
-
-        // Get all days in the range
-        const daysInRange = eachDayOfInterval({ start, end });
-
-        // Determine cycle start (first day of the range)
-        const rangeStartNormalized = startOfDay(start.getTime());
-        const isFirstPeriodLog = !currentCycle ||
-          (currentCycle && !currentCycle.periodEndDate &&
-           rangeStartNormalized > currentCycle.startDate + 7 * 24 * 60 * 60 * 1000);
-
-        if (isFirstPeriodLog) {
-          await startNewCycle(rangeStartNormalized);
-        }
-
-        // Create a record for each day in the range
-        for (const day of daysInRange) {
-          const dayNormalized = startOfDay(day.getTime());
-          const data: PeriodData = {
-            date: dayNormalized,
-            flowIntensity,
-            notes: notes.trim() || undefined,
-          };
-
-          await addRecord({
-            type: 'period',
-            data,
-            tags: [],
-          });
-        }
-
-        // Ensure all records are loaded after multi-day addition
-        await refresh();
-      }
-
-      showToast(existingRecord ? 'Period updated' : 'Period logged');
-      handleClose();
-    } catch (error) {
-      logger.error('Failed to save period log:', error);
-      showToast("Couldn't save your entry. Please try again.", 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!existingRecord) return;
-
-    setIsSubmitting(true);
-    try {
-      await deleteRecord(existingRecord.id);
-      showToast('Entry deleted');
-      handleClose();
-    } catch (error) {
-      logger.error('Failed to delete period log:', error);
-      showToast("Couldn't delete your entry. Please try again.", 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleClose = () => {
-    // Reset form state when closing
-    setMode('single');
-    setStartDate(format(new Date(date), 'yyyy-MM-dd'));
-    setEndDate(format(new Date(date), 'yyyy-MM-dd'));
-    onClose();
-  };
+  const form = usePeriodLogForm({ date, existingRecord, onClose });
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={handleClose} title={existingRecord ? 'Edit Period' : 'Log Period'}>
-      <div className="space-y-4">
+    <BottomSheet isOpen={isOpen} onClose={form.handleClose} title={existingRecord ? 'Edit Period' : 'Log Period'}>
+      <div className="stack">
         {!existingRecord && (
           <>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{dateLabel}</p>
-
-            {/* Mode toggle */}
-            <div className="flex gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-1 transition-colors duration-200">
-              <button
-                type="button"
-                onClick={() => setMode('single')}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors duration-200 ${
-                  mode === 'single'
-                    ? 'bg-white dark:bg-gray-800 text-rose-600 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                }`}
-              >
-                Single Day
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('multi')}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors duration-200 ${
-                  mode === 'multi'
-                    ? 'bg-white dark:bg-gray-800 text-rose-600 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                }`}
-              >
-                Multiple Days
-              </button>
-            </div>
-
-            {/* Date range inputs for multi-day mode */}
-            {mode === 'multi' && (
-              <div className="space-y-3 bg-rose-50 dark:bg-gray-800 rounded-lg p-3 transition-colors duration-200">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    onClick={openDatePicker}
-                    onFocus={openDatePicker}
-                    className="mt-1 w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-colors duration-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    onClick={openDatePicker}
-                    onFocus={openDatePicker}
-                    className="mt-1 w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-colors duration-200"
-                  />
-                </div>
-                {startDate && endDate && new Date(startDate) <= new Date(endDate) && (
-                  <p className="text-xs text-rose-600">
-                    Will log period for {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} day(s)
-                  </p>
-                )}
-              </div>
+            <p className="supporting">{formatLong(date)}</p>
+            <SegmentedButton label="Days to log" segments={MODES} value={form.mode} onChange={form.setMode} />
+            {form.mode === 'multi' && (
+              <PeriodDateRange
+                startDate={form.startDate}
+                endDate={form.endDate}
+                onStartChange={form.setStartDate}
+                onEndChange={form.setEndDate}
+              />
             )}
           </>
         )}
-
-        <FlowIntensityPicker value={flowIntensity} onChange={setFlowIntensity} />
-
-        <div>
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="mt-1 w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-colors duration-200"
-            rows={3}
-            placeholder="Any additional notes..."
-          />
-        </div>
-
+        <FlowIntensityPicker value={form.flowIntensity} onChange={form.setFlowIntensity} />
+        <NotesField value={form.notes} onChange={form.setNotes} />
         <LogFormActions
-          onSave={handleSave}
-          onCancel={handleClose}
-          onDelete={existingRecord ? handleDelete : undefined}
-          canSave={Boolean(flowIntensity) && !(mode === 'multi' && (!startDate || !endDate))}
-          isSubmitting={isSubmitting}
-          saveClassName="bg-rose-500 hover:bg-rose-600"
+          onSave={form.handleSave}
+          onCancel={form.handleClose}
+          onDelete={form.handleDelete}
+          canSave={form.canSave}
+          isSubmitting={form.isSubmitting}
         />
       </div>
     </BottomSheet>

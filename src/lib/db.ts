@@ -8,6 +8,7 @@ import type {
 } from './types';
 import { logger } from './logger';
 import { inferDateFormatStyle } from './dateFormat';
+import { announce, emitLocal } from './vaultEvents';
 
 class JunoVaultDB extends Dexie {
   records!: EntityTable<EncryptedRecord, 'id'>;
@@ -26,10 +27,51 @@ class JunoVaultDB extends Dexie {
       userProfile: 'id',
       cycles: 'id, startDate',
     });
+
+    // v2: nothing about an entry may sit outside its ciphertext. Drop the
+    // plaintext indexes (entry type, edit time, cycle link, period start
+    // date) and erase those values from rows written by earlier versions.
+    this.version(2)
+      .stores({
+        records: 'id',
+        cycles: 'id',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('records')
+          .toCollection()
+          .modify((row) => {
+            delete row.category;
+            delete row.timestamp;
+            delete row.cycleId;
+          });
+        await tx
+          .table('cycles')
+          .toCollection()
+          .modify((row) => {
+            delete row.startDate;
+          });
+        await tx
+          .table('settings')
+          .toCollection()
+          .modify((row) => {
+            delete row.lastUnlockedAt;
+          });
+      });
   }
 }
 
 export const db = new JunoVaultDB();
+
+// Another tab is deleting or upgrading the database. Dexie's default handler
+// closes and then silently reopens on the next call, which would recreate a
+// database the user just asked to erase. Close for good and let the app
+// lock and reload instead.
+db.on('versionchange', () => {
+  db.close({ disableAutoOpen: true });
+  emitLocal('wiped');
+  return false;
+});
 
 // ============================================
 // MIGRATION FROM HEALTHVAULT
@@ -70,7 +112,6 @@ export async function migrateFromHealthVault(): Promise<boolean> {
         const migratedSetting: AppSettings = {
           id: setting.id,
           sessionTimeout: setting.sessionTimeout || 15 * 60 * 1000,
-          lastUnlockedAt: setting.lastUnlockedAt,
           periodReminderEnabled: false,
           periodReminderDays: 3,
           autoLockOnHidden: true,
@@ -98,12 +139,14 @@ export async function migrateFromHealthVault(): Promise<boolean> {
 // DATABASE OPERATIONS
 // ============================================
 
+/**
+ * Erase everything. Deletes the whole database rather than emptying its
+ * tables, so the wrapped vault key goes too and nothing is left to unlock.
+ */
 export async function clearAllData(): Promise<void> {
-  await db.records.clear();
-  await db.keyStore.clear();
-  await db.settings.clear();
-  await db.userProfile.clear();
-  await db.cycles.clear();
+  announce('wiped');
+  await db.delete();
+  await db.open();
 }
 
 export async function hasExistingVault(): Promise<boolean> {
@@ -131,6 +174,7 @@ export async function getSettings(): Promise<AppSettings> {
 export async function updateSettings(updates: Partial<AppSettings>): Promise<void> {
   const settings = await getSettings();
   await db.settings.put({ ...settings, ...updates });
+  emitLocal('settings');
 }
 
 // ============================================

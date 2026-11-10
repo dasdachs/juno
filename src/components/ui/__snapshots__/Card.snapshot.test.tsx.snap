@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Card > renders the elevated variant 1`] = `
+<DocumentFragment>
+  <article
+    class=""
+  >
+    Cycle day 14
+  </article>
+</DocumentFragment>
+`;
+
+exports[`Card > renders the filled variant 1`] = `
+<DocumentFragment>
+  <article
+    class="no-elevate surface-container-highest"
+  >
+    Cycle day 14
+  </article>
+</DocumentFragment>
+`;
+
+exports[`Card > renders the outlined variant 1`] = `
+<DocumentFragment>
+  <article
+    class="no-elevate border"
+  >
+    Cycle day 14
+  </article>
+</DocumentFragment>
+`;

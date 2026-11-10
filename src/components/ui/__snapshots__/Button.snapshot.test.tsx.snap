@@ -1,0 +1,109 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Button > renders a disabled button 1`] = `
+<DocumentFragment>
+  <button
+    disabled=""
+    type="button"
+  >
+    <span>
+      Save
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Button > renders a filled button by default 1`] = `
+<DocumentFragment>
+  <button
+    type="button"
+  >
+    <span>
+      Save
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Button > renders a full-width button with a leading icon 1`] = `
+<DocumentFragment>
+  <button
+    class="responsive"
+    type="button"
+  >
+    <i
+      aria-hidden="true"
+    >
+      download
+    </i>
+    <span>
+      Export
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Button > renders the danger variant 1`] = `
+<DocumentFragment>
+  <button
+    class="error"
+    type="button"
+  >
+    <span>
+      Action
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Button > renders the danger-text variant 1`] = `
+<DocumentFragment>
+  <button
+    class="border no-border error-text"
+    type="button"
+  >
+    <span>
+      Action
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Button > renders the outlined variant 1`] = `
+<DocumentFragment>
+  <button
+    class="border"
+    type="button"
+  >
+    <span>
+      Action
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Button > renders the text variant 1`] = `
+<DocumentFragment>
+  <button
+    class="border no-border"
+    type="button"
+  >
+    <span>
+      Action
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Button > renders the tonal variant 1`] = `
+<DocumentFragment>
+  <button
+    class="fill"
+    type="button"
+  >
+    <span>
+      Action
+    </span>
+  </button>
+</DocumentFragment>
+`;

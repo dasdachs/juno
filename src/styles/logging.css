@@ -1,0 +1,31 @@
+/* Logging forms and pickers. Colours come from the MD3 tokens in theme.css. */
+
+.picker-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+}
+
+/* Flow intensity swatch inside a tile (colour from the .flow-* classes). */
+.flow-swatch {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: 50%;
+}
+
+.severity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--surface-container);
+}
+
+/* Footer: Delete on the leading edge, Cancel and Save on the trailing edge. */
+.log-actions { padding-block-start: 0.5rem; }
+.log-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.log-actions-row > * { margin: 0 !important; }
+.log-actions-spacer { flex: 1; }

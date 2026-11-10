@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Dialog > renders an open modal dialog with actions 1`] = `
+<DocumentFragment>
+  <button
+    aria-label="Close"
+    class="scrim"
+    tabindex="-1"
+    type="button"
+  />
+  <dialog
+    aria-label="Delete all data?"
+    aria-modal="true"
+    class="active modal"
+    open=""
+    tabindex="-1"
+  >
+    <h5>
+      Delete all data?
+    </h5>
+    <div
+      class="dialog-body"
+    >
+      This cannot be undone.
+    </div>
+    <nav
+      class="right-align dialog-actions"
+    >
+      <button
+        class="border no-border"
+        type="button"
+      >
+        <span>
+          Cancel
+        </span>
+      </button>
+    </nav>
+  </dialog>
+</DocumentFragment>
+`;

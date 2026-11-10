@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/db';
-import { encryptRecord, decryptRecord, generateId, isUnlocked } from '../lib/crypto';
+import { encryptRecord, decryptRecord, generateId, isUnlocked, toTombstone } from '../lib/crypto';
 import type { HealthRecord, RecordType, EncryptedRecord } from '../lib/types';
 
 interface UseRecordsResult {
@@ -40,17 +40,9 @@ export function useRecords(options: UseRecordsOptions = {}): UseRecordsResult {
       setIsLoading(true);
       setError(null);
 
-      let encryptedRecords: EncryptedRecord[];
-
-      if (options.type) {
-        encryptedRecords = await db.records
-          .where('category')
-          .equals(options.type)
-          .reverse()
-          .sortBy('timestamp');
-      } else {
-        encryptedRecords = await db.records.orderBy('timestamp').reverse().toArray();
-      }
+      // Entry type and timestamps exist only inside the ciphertext, so
+      // filtering and ordering happen after decryption.
+      const encryptedRecords: EncryptedRecord[] = await db.records.toArray();
 
       const decryptedRecords = encryptedRecords
         .map((er) => {
@@ -61,7 +53,9 @@ export function useRecords(options: UseRecordsOptions = {}): UseRecordsResult {
             return null;
           }
         })
-        .filter((r): r is HealthRecord => r !== null && !r.deletedAt);
+        .filter((r): r is HealthRecord => r !== null && !r.deletedAt)
+        .filter((r) => !options.type || r.type === options.type)
+        .sort((a, b) => b.updatedAt - a.updatedAt);
 
       // Filter by search term if provided
       let filteredRecords = decryptedRecords;
@@ -161,14 +155,10 @@ export function useRecords(options: UseRecordsOptions = {}): UseRecordsResult {
         throw new Error('Record not found');
       }
 
+      // Keep only a content-free tombstone (needed so sync can propagate the
+      // deletion); the entry's data itself is erased.
       const record = decryptRecord(encrypted);
-      const deletedRecord: HealthRecord = {
-        ...record,
-        deletedAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-
-      const newEncrypted = encryptRecord(deletedRecord);
+      const newEncrypted = encryptRecord(toTombstone(record, Date.now()));
       await db.records.put(newEncrypted);
       await loadRecords();
     },

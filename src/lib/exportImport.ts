@@ -1,17 +1,20 @@
-import sodium from 'libsodium-wrappers-sumo';
 import { db } from './db';
 import {
   initCrypto,
-  deriveKeyFromPassword,
-  arrayToBase64,
-  base64ToArray,
+  sealWithPassword,
+  openWithPassword,
   decryptRecord,
   decryptCycleData,
   decryptUserProfile,
   encryptRecord,
   encryptCycleData,
   encryptUserProfile,
+  scrubIfDeleted,
+  scrubCycleIfDeleted,
+  isUnlocked,
+  isVaultKeyCurrent,
 } from './crypto';
+import { assertValidPayload, MAX_IMPORT_FILE_SIZE, type VaultPayload } from './payloadValidation';
 import type { HealthRecord, CycleData, UserProfile } from './types';
 
 // ============================================
@@ -21,9 +24,11 @@ import type { HealthRecord, CycleData, UserProfile } from './types';
 export interface ExportManifest {
   version: 1;
   exportedAt: number;
-  recordCount: number;
-  cycleCount: number;
-  hasProfile: boolean;
+  // Written only by older versions. The manifest is readable without the
+  // password, so it no longer says how much data the backup holds.
+  recordCount?: number;
+  cycleCount?: number;
+  hasProfile?: boolean;
 }
 
 export interface ExportFile {
@@ -48,20 +53,57 @@ interface ExportPayload {
 // EXPORT
 // ============================================
 
-export async function exportData(backupPassword: string): Promise<Blob> {
+/**
+ * Decrypt everything in the vault. Rows that cannot be decrypted are skipped
+ * and counted rather than aborting: one damaged row must not make it
+ * impossible to ever take a backup.
+ */
+export async function readVault(): Promise<VaultPayload & { unreadable: number }> {
+  if (!(await isVaultKeyCurrent())) {
+    throw new Error('Vault is locked');
+  }
+
+  let unreadable = 0;
+  const readAll = <E, T>(rows: E[], decrypt: (row: E) => T): T[] =>
+    rows.flatMap((row) => {
+      try {
+        return [decrypt(row)];
+      } catch (error) {
+        // A locked vault is not a damaged row
+        if (!isUnlocked()) throw error;
+        unreadable++;
+        return [];
+      }
+    });
+
+  const records = readAll(await db.records.toArray(), decryptRecord);
+  const cycles = readAll(await db.cycles.toArray(), decryptCycleData);
+  const [profile = null] = readAll(
+    await db.userProfile.where('id').equals('primary').toArray(),
+    decryptUserProfile
+  );
+
+  // Everything unreadable means the key is wrong, not that rows are damaged.
+  // An empty backup that looks successful would be worse than an error.
+  if (unreadable > 0 && records.length === 0 && cycles.length === 0 && !profile) {
+    throw new Error('Your data could not be read. Lock the app, unlock it again and retry.');
+  }
+
+  return { records, cycles, profile, unreadable };
+}
+
+/**
+ * @param onUnreadable called with the number of rows that could not be
+ *   decrypted and were therefore left out of the backup, if any.
+ */
+export async function exportData(
+  backupPassword: string,
+  onUnreadable?: (count: number) => void
+): Promise<Blob> {
   await initCrypto();
 
-  // Decrypt all records
-  const encryptedRecords = await db.records.toArray();
-  const records: HealthRecord[] = encryptedRecords.map((er) => decryptRecord(er));
-
-  // Decrypt all cycles
-  const encryptedCycles = await db.cycles.toArray();
-  const cycles: CycleData[] = encryptedCycles.map((ec) => decryptCycleData(ec));
-
-  // Decrypt profile
-  const encryptedProfile = await db.userProfile.get('primary');
-  const profile = encryptedProfile ? decryptUserProfile(encryptedProfile) : null;
+  const { records, cycles, profile, unreadable } = await readVault();
+  if (unreadable > 0) onUnreadable?.(unreadable);
 
   // Get exportable settings
   const appSettings = await db.settings.get('primary');
@@ -73,30 +115,16 @@ export async function exportData(backupPassword: string): Promise<Blob> {
 
   const payload: ExportPayload = { records, cycles, profile, settings };
 
-  // Derive encryption key from backup password
-  const salt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
-  const key = await deriveKeyFromPassword(backupPassword, salt);
-
-  // Encrypt payload
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const plaintext = sodium.from_string(JSON.stringify(payload));
-  const ciphertext = sodium.crypto_secretbox_easy(new Uint8Array(plaintext), nonce, key);
-
-  sodium.memzero(key);
+  const sealed = await sealWithPassword(JSON.stringify(payload), backupPassword);
 
   const manifest: ExportManifest = {
     version: 1,
     exportedAt: Date.now(),
-    recordCount: records.length,
-    cycleCount: cycles.length,
-    hasProfile: profile !== null,
   };
 
   const exportFile: ExportFile = {
     manifest,
-    salt: arrayToBase64(salt),
-    nonce: arrayToBase64(nonce),
-    ciphertext: arrayToBase64(ciphertext),
+    ...sealed,
   };
 
   return new Blob([JSON.stringify(exportFile)], { type: 'application/json' });
@@ -121,70 +149,68 @@ export async function importData(
 ): Promise<{ recordsImported: number; cyclesImported: number; profileImported: boolean }> {
   await initCrypto();
 
+  if (fileContent.length > MAX_IMPORT_FILE_SIZE) {
+    throw new Error('Backup file is too large');
+  }
+
   const exportFile = JSON.parse(fileContent) as ExportFile;
   if (!exportFile.manifest || exportFile.manifest.version !== 1) {
     throw new Error('Invalid or unsupported backup file format');
   }
 
-  // Derive key from backup password
-  const salt = base64ToArray(exportFile.salt);
-  const key = await deriveKeyFromPassword(backupPassword, salt);
-
   // Decrypt payload
   let payload: ExportPayload;
   try {
-    const nonce = base64ToArray(exportFile.nonce);
-    const ciphertext = base64ToArray(exportFile.ciphertext);
-    const plaintextBytes = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
-    payload = JSON.parse(sodium.to_string(plaintextBytes)) as ExportPayload;
+    payload = JSON.parse(await openWithPassword(exportFile, backupPassword)) as ExportPayload;
   } catch {
-    sodium.memzero(key);
     throw new Error('Incorrect backup password');
   }
 
-  sodium.memzero(key);
+  if (!(await isVaultKeyCurrent())) {
+    throw new Error('Vault is locked');
+  }
+
+  // Validate before touching the database, so a malformed backup cannot
+  // leave the vault cleared and half-restored.
+  try {
+    assertValidPayload(payload);
+  } catch {
+    throw new Error('Backup file contents are invalid');
+  }
 
   let recordsImported = 0;
   let cyclesImported = 0;
   let profileImported = false;
 
-  if (strategy === 'replace') {
-    // Clear existing data (keep keyStore and settings)
-    await db.records.clear();
-    await db.cycles.clear();
-    await db.userProfile.clear();
-  }
-
-  // Import records
-  for (const record of payload.records) {
-    if (strategy === 'merge') {
-      const existing = await db.records.get(record.id);
-      if (existing) continue;
+  // One transaction: either the whole import applies or nothing changes.
+  await db.transaction('rw', db.records, db.cycles, db.userProfile, async () => {
+    if (strategy === 'replace') {
+      // Clear existing data (keep keyStore and settings)
+      await db.records.clear();
+      await db.cycles.clear();
+      await db.userProfile.clear();
     }
-    const encrypted = encryptRecord(record);
-    await db.records.put(encrypted);
-    recordsImported++;
-  }
 
-  // Import cycles
-  for (const cycle of payload.cycles) {
-    if (strategy === 'merge') {
-      const existing = await db.cycles.get(cycle.id);
-      if (existing) continue;
+    for (const record of payload.records) {
+      if (strategy === 'merge' && (await db.records.get(record.id))) continue;
+      // Older backups may hold deleted entries with their content intact
+      await db.records.put(encryptRecord(scrubIfDeleted(record)));
+      recordsImported++;
     }
-    const encrypted = encryptCycleData(cycle);
-    await db.cycles.put(encrypted);
-    cyclesImported++;
-  }
 
-  // Import profile
-  if (payload.profile) {
-    if (strategy === 'replace' || !(await db.userProfile.get(payload.profile.id))) {
-      const encrypted = encryptUserProfile(payload.profile);
-      await db.userProfile.put(encrypted);
-      profileImported = true;
+    for (const cycle of payload.cycles) {
+      if (strategy === 'merge' && (await db.cycles.get(cycle.id))) continue;
+      await db.cycles.put(encryptCycleData(scrubCycleIfDeleted(cycle)));
+      cyclesImported++;
     }
-  }
+
+    if (payload.profile) {
+      if (strategy === 'replace' || !(await db.userProfile.get(payload.profile.id))) {
+        await db.userProfile.put(encryptUserProfile(payload.profile));
+        profileImported = true;
+      }
+    }
+  });
 
   return { recordsImported, cyclesImported, profileImported };
 }

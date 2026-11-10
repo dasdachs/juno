@@ -1,5 +1,6 @@
 import sodium from 'libsodium-wrappers-sumo';
 import { db } from './db';
+import { announce } from './vaultEvents';
 import type {
   HealthRecord,
   EncryptedRecord,
@@ -12,6 +13,22 @@ import type {
 
 let isInitialized = false;
 let vaultKey: Uint8Array | null = null;
+// The wrapped vault key as stored when this tab obtained its key. If the
+// stored value has since changed (password changed in another tab), the key
+// held here is stale.
+let unlockedKeyTag: string | null = null;
+
+/**
+ * False if the vault key in the database is no longer the one this tab
+ * unlocked with. A stale tab is locked on the spot.
+ */
+export async function isVaultKeyCurrent(): Promise<boolean> {
+  if (!vaultKey) return false;
+  const keyStore = await db.keyStore.get('primary');
+  if (keyStore?.encryptedVaultKey === unlockedKeyTag) return true;
+  lock();
+  return false;
+}
 
 export async function initCrypto(): Promise<void> {
   if (isInitialized) return;
@@ -32,6 +49,15 @@ export function lock(): void {
 
 export function arrayToBase64(arr: Uint8Array): string {
   return sodium.to_base64(arr, sodium.base64_variants.ORIGINAL);
+}
+
+// Copy into a Uint8Array of this realm: libsodium rejects arrays created in
+// another realm (as happens under jsdom).
+function utf8(str: string): Uint8Array {
+  const encoded = sodium.from_string(str);
+  const copy = new Uint8Array(encoded);
+  encoded.fill(0);
+  return copy;
 }
 
 export function base64ToArray(str: string): Uint8Array {
@@ -83,36 +109,36 @@ function idToSubkeyId(id: string): number {
   return hash[0] + (hash[1] << 8) + (hash[2] << 16);
 }
 
-function deriveRecordKey(recordId: string): Uint8Array {
-  if (!vaultKey) throw new Error('Vault is locked');
-  const subkeyId = idToSubkeyId(recordId);
-  return sodium.crypto_kdf_derive_from_key(
-    sodium.crypto_secretbox_KEYBYTES,
-    subkeyId,
-    RECORD_CONTEXT,
-    vaultKey
-  );
-}
+/** Current on-disk ciphertext format. */
+export const CURRENT_FORMAT_VERSION = 3;
 
-function deriveCycleKey(cycleId: string): Uint8Array {
-  if (!vaultKey) throw new Error('Vault is locked');
-  const subkeyId = idToSubkeyId(cycleId);
+/**
+ * Derive the per-item key.
+ *
+ * - Format v3+: keyed BLAKE2b over `context || id` with the vault key as the
+ *   key. The whole ID is bound into the key, so every item gets its own key.
+ * - Format v2 and older (legacy, decrypt-only): crypto_kdf with a 24-bit
+ *   subkey ID, which lets unrelated items share a key.
+ */
+function deriveItemKey(
+  context: string,
+  id: string,
+  version: number,
+  rootKey: Uint8Array | null
+): Uint8Array {
+  if (!rootKey) throw new Error('Vault is locked');
+  if (version >= 3) {
+    return sodium.crypto_generichash(
+      sodium.crypto_secretbox_KEYBYTES,
+      utf8(context + id),
+      rootKey
+    );
+  }
   return sodium.crypto_kdf_derive_from_key(
     sodium.crypto_secretbox_KEYBYTES,
-    subkeyId,
-    CYCLE_CONTEXT,
-    vaultKey
-  );
-}
-
-function deriveProfileKey(profileId: string): Uint8Array {
-  if (!vaultKey) throw new Error('Vault is locked');
-  const subkeyId = idToSubkeyId(profileId);
-  return sodium.crypto_kdf_derive_from_key(
-    sodium.crypto_secretbox_KEYBYTES,
-    subkeyId,
-    PROFILE_CONTEXT,
-    vaultKey
+    idToSubkeyId(id),
+    context,
+    rootKey
   );
 }
 
@@ -120,23 +146,135 @@ function deriveProfileKey(profileId: string): Uint8Array {
 // SHARED ENCRYPT / DECRYPT HELPERS
 // ============================================
 
+// Plaintext is padded to a multiple of this before encryption so that the
+// ciphertext length does not reveal the kind of entry or the size of a note.
+const PAD_BLOCK_SIZE = 256;
+
 function encryptWithKey(plaintext: string, key: Uint8Array): { nonce: string; ciphertext: string } {
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const plaintextBytes = sodium.from_string(plaintext);
-  const message = new Uint8Array(plaintextBytes);
-  const ciphertext = sodium.crypto_secretbox_easy(message, nonce, new Uint8Array(key));
-
-  return {
-    nonce: arrayToBase64(nonce),
-    ciphertext: arrayToBase64(ciphertext),
-  };
+  const unpadded = utf8(plaintext);
+  const message = sodium.pad(unpadded, PAD_BLOCK_SIZE);
+  sodium.memzero(unpadded);
+  try {
+    const ciphertext = sodium.crypto_secretbox_easy(message, nonce, key);
+    return {
+      nonce: arrayToBase64(nonce),
+      ciphertext: arrayToBase64(ciphertext),
+    };
+  } finally {
+    sodium.memzero(message);
+  }
 }
 
-function decryptWithKey(ciphertextB64: string, nonceB64: string, key: Uint8Array): string {
+function decryptWithKey(
+  ciphertextB64: string,
+  nonceB64: string,
+  key: Uint8Array,
+  version: number
+): string {
   const nonce = base64ToArray(nonceB64);
   const ciphertext = base64ToArray(ciphertextB64);
-  const plaintextBytes = sodium.crypto_secretbox_open_easy(ciphertext, nonce, new Uint8Array(key));
-  return sodium.to_string(plaintextBytes);
+  const opened = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
+  // Only v3+ plaintexts are padded. unpad returns a view of a fresh copy, so
+  // both buffers need wiping.
+  const plaintextBytes = version >= 3 ? sodium.unpad(opened, PAD_BLOCK_SIZE) : opened;
+  try {
+    return sodium.to_string(plaintextBytes);
+  } finally {
+    sodium.memzero(plaintextBytes);
+    sodium.memzero(opened);
+  }
+}
+
+interface EncryptedEnvelope {
+  id: string;
+  nonce: string;
+  ciphertext: string;
+  version: number;
+}
+
+function encryptItem<T extends { id: string }>(
+  context: string,
+  item: T,
+  rootKey: Uint8Array | null
+): EncryptedEnvelope {
+  const key = deriveItemKey(context, item.id, CURRENT_FORMAT_VERSION, rootKey);
+  try {
+    const { nonce, ciphertext } = encryptWithKey(JSON.stringify(item), key);
+    return { id: item.id, nonce, ciphertext, version: CURRENT_FORMAT_VERSION };
+  } finally {
+    sodium.memzero(key);
+  }
+}
+
+function decryptItem<T extends { id: string }>(
+  context: string,
+  encrypted: EncryptedEnvelope,
+  rootKey: Uint8Array | null
+): T {
+  const key = deriveItemKey(context, encrypted.id, encrypted.version, rootKey);
+  try {
+    const plaintext = decryptWithKey(encrypted.ciphertext, encrypted.nonce, key, encrypted.version);
+    const item = JSON.parse(plaintext) as T;
+    // Bind the ciphertext to its row: a ciphertext moved onto another row's ID
+    // must not be accepted as that row's content.
+    if (item.id !== encrypted.id) {
+      throw new Error('Decrypted item does not match its ID');
+    }
+    return item;
+  } finally {
+    sodium.memzero(key);
+  }
+}
+
+// ============================================
+// PASSWORD-BASED SEALING (backups, sync files)
+// ============================================
+
+export interface PasswordSealed {
+  salt: string;
+  nonce: string;
+  ciphertext: string;
+}
+
+/** Encrypt a string under a key derived from `password` (Argon2id + secretbox). */
+export async function sealWithPassword(plaintext: string, password: string): Promise<PasswordSealed> {
+  await initCrypto();
+  const salt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
+  const key = await deriveKeyFromPassword(password, salt);
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+  const message = utf8(plaintext);
+  try {
+    const ciphertext = sodium.crypto_secretbox_easy(message, nonce, key);
+    return {
+      salt: arrayToBase64(salt),
+      nonce: arrayToBase64(nonce),
+      ciphertext: arrayToBase64(ciphertext),
+    };
+  } finally {
+    sodium.memzero(key);
+    sodium.memzero(message);
+  }
+}
+
+/** Inverse of sealWithPassword. Throws if the password is wrong or the data was altered. */
+export async function openWithPassword(sealed: PasswordSealed, password: string): Promise<string> {
+  await initCrypto();
+  const key = await deriveKeyFromPassword(password, base64ToArray(sealed.salt));
+  try {
+    const opened = sodium.crypto_secretbox_open_easy(
+      base64ToArray(sealed.ciphertext),
+      base64ToArray(sealed.nonce),
+      key
+    );
+    try {
+      return sodium.to_string(opened);
+    } finally {
+      sodium.memzero(opened);
+    }
+  } finally {
+    sodium.memzero(key);
+  }
 }
 
 // ============================================
@@ -170,7 +308,9 @@ export async function createVault(password: string): Promise<void> {
   await db.keyStore.put(keyStore);
 
   // Keep vault key in memory
+  lock();
   vaultKey = newVaultKey;
+  unlockedKeyTag = keyStore.encryptedVaultKey;
 
   // Clear master key from memory
   sodium.memzero(masterKey);
@@ -205,12 +345,18 @@ export async function unlock(password: string): Promise<boolean> {
       masterKey
     );
 
+    lock();
     vaultKey = decryptedVaultKey;
+    unlockedKeyTag = keyStore.encryptedVaultKey;
     sodium.memzero(masterKey);
     result = true;
   } catch {
     sodium.memzero(masterKey);
     result = false;
+  }
+
+  if (result) {
+    await upgradeLegacyCiphertexts();
   }
 
   // Constant-time delay to prevent timing attacks
@@ -255,63 +401,121 @@ export async function changePassword(
 
   sodium.memzero(oldMasterKey);
 
-  // Generate new salt and encrypt vault key with new password
-  const newSalt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
-  const newMasterKey = await deriveKeyFromPassword(newPassword, newSalt);
-  const newVaultKeyNonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const newEncryptedVaultKey = sodium.crypto_secretbox_easy(
-    currentVaultKey,
-    newVaultKeyNonce,
-    newMasterKey
-  );
+  // Rotate the vault key: a new random key, wrapped under the new password,
+  // with every row re-encrypted under it. Without this, an old copy of the
+  // key store plus the old password would still open all current data.
+  const newVaultKey = sodium.randombytes_buf(sodium.crypto_secretbox_KEYBYTES);
+  let keepNewKey = false;
 
-  // Update key store
-  const newKeyStore: KeyStore = {
-    id: 'primary',
-    salt: arrayToBase64(newSalt),
-    encryptedVaultKey: arrayToBase64(newEncryptedVaultKey),
-    vaultKeyNonce: arrayToBase64(newVaultKeyNonce),
-  };
+  try {
+    const newSalt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
+    const newMasterKey = await deriveKeyFromPassword(newPassword, newSalt);
+    let newKeyStore: KeyStore;
+    try {
+      const newVaultKeyNonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+      newKeyStore = {
+        id: 'primary',
+        salt: arrayToBase64(newSalt),
+        encryptedVaultKey: arrayToBase64(
+          sodium.crypto_secretbox_easy(newVaultKey, newVaultKeyNonce, newMasterKey)
+        ),
+        vaultKeyNonce: arrayToBase64(newVaultKeyNonce),
+      };
+    } finally {
+      sodium.memzero(newMasterKey);
+    }
 
-  await db.keyStore.put(newKeyStore);
+    const tables = [
+      { table: db.records, context: RECORD_CONTEXT },
+      { table: db.cycles, context: CYCLE_CONTEXT },
+      { table: db.userProfile, context: PROFILE_CONTEXT },
+    ] as const;
 
-  // Update in-memory vault key
-  vaultKey = currentVaultKey;
+    // One transaction: the new key store and the re-encrypted rows land
+    // together or not at all.
+    await db.transaction('rw', db.records, db.cycles, db.userProfile, db.keyStore, async () => {
+      for (const { table, context } of tables) {
+        const rows = (await table.toArray()) as EncryptedEnvelope[];
+        for (const row of rows) {
+          let item: { id: string };
+          try {
+            item = decryptItem(context, row, currentVaultKey);
+          } catch {
+            // Already unreadable under the old key: leave as is
+            continue;
+          }
+          await (table as unknown as { put(row: EncryptedEnvelope): Promise<unknown> }).put(
+            encryptItem(context, item, newVaultKey)
+          );
+        }
+      }
+      await db.keyStore.put(newKeyStore);
+    });
 
-  sodium.memzero(newMasterKey);
+    // Any other open tab still holds the old key: make it lock.
+    announce('rotated');
 
-  return true;
+    // Stay unlocked under the new key, unless the vault was locked (e.g. by
+    // auto-lock) while the password was being changed: then it stays locked.
+    if (vaultKey) {
+      lock();
+      vaultKey = newVaultKey;
+      unlockedKeyTag = newKeyStore.encryptedVaultKey;
+      keepNewKey = true;
+    }
+
+    return true;
+  } finally {
+    sodium.memzero(currentVaultKey);
+    if (!keepNewKey) sodium.memzero(newVaultKey);
+  }
 }
 
 // ============================================
-// RECORD ENCRYPTION (HKDF per-record keys)
+// RECORD / CYCLE / PROFILE ENCRYPTION
 // ============================================
+//
+// The stored wrapper carries nothing but the row ID, nonce, ciphertext and
+// format version. Entry type, dates and timestamps live only inside the
+// ciphertext; they must never be copied into plaintext columns.
+
+/**
+ * A deleted record keeps only what sync needs to propagate the deletion: its
+ * ID and when it was deleted. What kind of entry it was and when it was
+ * created are erased along with its content.
+ */
+export function toTombstone(record: HealthRecord, deletedAt: number): HealthRecord {
+  return {
+    id: record.id,
+    type: 'note',
+    createdAt: deletedAt,
+    updatedAt: deletedAt,
+    deletedAt,
+    data: {} as HealthRecord['data'],
+    tags: [],
+  };
+}
+
+/** Deleted records coming from a backup or sync file must never carry content. */
+export function scrubIfDeleted(record: HealthRecord): HealthRecord {
+  return record.deletedAt ? toTombstone(record, record.deletedAt) : record;
+}
+
+/** A deleted cycle keeps only its ID and deletion time. */
+export function toCycleTombstone(id: string, deletedAt: number): CycleData {
+  return { id, cycleNumber: 0, startDate: 0, deletedAt };
+}
+
+export function scrubCycleIfDeleted(cycle: CycleData): CycleData {
+  return cycle.deletedAt ? toCycleTombstone(cycle.id, cycle.deletedAt) : cycle;
+}
 
 export function encryptRecord(record: HealthRecord): EncryptedRecord {
-  const key = deriveRecordKey(record.id);
-  try {
-    const { nonce, ciphertext } = encryptWithKey(JSON.stringify(record), key);
-    return {
-      id: record.id,
-      nonce,
-      ciphertext,
-      category: record.type,
-      version: 2,
-      timestamp: record.updatedAt,
-    };
-  } finally {
-    sodium.memzero(key);
-  }
+  return encryptItem(RECORD_CONTEXT, record, vaultKey);
 }
 
 export function decryptRecord(encryptedRecord: EncryptedRecord): HealthRecord {
-  const key = deriveRecordKey(encryptedRecord.id);
-  try {
-    const plaintext = decryptWithKey(encryptedRecord.ciphertext, encryptedRecord.nonce, key);
-    return JSON.parse(plaintext) as HealthRecord;
-  } finally {
-    sodium.memzero(key);
-  }
+  return decryptItem<HealthRecord>(RECORD_CONTEXT, encryptedRecord, vaultKey);
 }
 
 export function generateId(): string {
@@ -319,61 +523,65 @@ export function generateId(): string {
   return arrayToBase64(bytes).replace(/[+/=]/g, '');
 }
 
-// ============================================
-// CYCLE DATA ENCRYPTION (HKDF per-cycle keys)
-// ============================================
-
 export function encryptCycleData(cycle: CycleData): EncryptedCycleData {
-  const key = deriveCycleKey(cycle.id);
-  try {
-    const { nonce, ciphertext } = encryptWithKey(JSON.stringify(cycle), key);
-    return {
-      id: cycle.id,
-      nonce,
-      ciphertext,
-      startDate: cycle.startDate, // Keep unencrypted for indexing
-      version: 2,
-    };
-  } finally {
-    sodium.memzero(key);
-  }
+  return encryptItem(CYCLE_CONTEXT, cycle, vaultKey);
 }
 
 export function decryptCycleData(encrypted: EncryptedCycleData): CycleData {
-  const key = deriveCycleKey(encrypted.id);
-  try {
-    const plaintext = decryptWithKey(encrypted.ciphertext, encrypted.nonce, key);
-    return JSON.parse(plaintext) as CycleData;
-  } finally {
-    sodium.memzero(key);
-  }
+  return decryptItem<CycleData>(CYCLE_CONTEXT, encrypted, vaultKey);
 }
 
-// ============================================
-// USER PROFILE ENCRYPTION (HKDF per-profile keys)
-// ============================================
-
 export function encryptUserProfile(profile: UserProfile): EncryptedUserProfile {
-  const key = deriveProfileKey(profile.id);
-  try {
-    const { nonce, ciphertext } = encryptWithKey(JSON.stringify(profile), key);
-    return {
-      id: profile.id,
-      nonce,
-      ciphertext,
-      version: 2,
-    };
-  } finally {
-    sodium.memzero(key);
-  }
+  return encryptItem(PROFILE_CONTEXT, profile, vaultKey);
 }
 
 export function decryptUserProfile(encrypted: EncryptedUserProfile): UserProfile {
-  const key = deriveProfileKey(encrypted.id);
+  return decryptItem<UserProfile>(PROFILE_CONTEXT, encrypted, vaultKey);
+}
+
+// ============================================
+// LEGACY FORMAT UPGRADE
+// ============================================
+
+/**
+ * Re-encrypt rows stored in an older format with the current one (full-ID
+ * keys, padded plaintext, no plaintext metadata), and strip the content of
+ * records that were deleted before deletions scrubbed their data.
+ *
+ * Runs after every successful unlock; a no-op once everything is current.
+ * Rows that fail to decrypt are left untouched. Never throws: a failed
+ * upgrade must not block unlocking, and is retried on the next unlock.
+ */
+export async function upgradeLegacyCiphertexts(): Promise<void> {
+  if (!vaultKey) return;
+  const isLegacy = (row: { version: number }) => !(row.version >= CURRENT_FORMAT_VERSION);
+
   try {
-    const plaintext = decryptWithKey(encrypted.ciphertext, encrypted.nonce, key);
-    return JSON.parse(plaintext) as UserProfile;
-  } finally {
-    sodium.memzero(key);
+    await db.transaction('rw', db.records, db.cycles, db.userProfile, async () => {
+      for (const row of (await db.records.toArray()).filter(isLegacy)) {
+        try {
+          const record = decryptRecord(row);
+          await db.records.put(encryptRecord(scrubIfDeleted(record)));
+        } catch {
+          // Undecryptable row: leave as is
+        }
+      }
+      for (const row of (await db.cycles.toArray()).filter(isLegacy)) {
+        try {
+          await db.cycles.put(encryptCycleData(scrubCycleIfDeleted(decryptCycleData(row))));
+        } catch {
+          // Undecryptable row: leave as is
+        }
+      }
+      for (const row of (await db.userProfile.toArray()).filter(isLegacy)) {
+        try {
+          await db.userProfile.put(encryptUserProfile(decryptUserProfile(row)));
+        } catch {
+          // Undecryptable row: leave as is
+        }
+      }
+    });
+  } catch {
+    // Retried on next unlock
   }
 }

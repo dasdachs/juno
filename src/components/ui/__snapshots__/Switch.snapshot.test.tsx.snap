@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Switch > renders an off switch with its label 1`] = `
+<DocumentFragment>
+  <div
+    class="row"
+  >
+    <div
+      class="max"
+    >
+      <div
+        id=":r0:"
+      >
+        Lock when hidden
+      </div>
+    </div>
+    <label
+      class="switch"
+    >
+      <input
+        aria-labelledby=":r0:"
+        role="switch"
+        type="checkbox"
+      />
+      <span />
+    </label>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`Switch > renders an on switch with supporting text 1`] = `
+<DocumentFragment>
+  <div
+    class="row"
+  >
+    <div
+      class="max"
+    >
+      <div
+        id=":r1:"
+      >
+        Lock when hidden
+      </div>
+      <div
+        class="small-text supporting"
+      >
+        Locks after 30 seconds
+      </div>
+    </div>
+    <label
+      class="switch"
+    >
+      <input
+        aria-labelledby=":r1:"
+        checked=""
+        role="switch"
+        type="checkbox"
+      />
+      <span />
+    </label>
+  </div>
+</DocumentFragment>
+`;

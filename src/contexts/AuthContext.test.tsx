@@ -129,7 +129,7 @@ describe('AuthContext', () => {
       expect(result.current.isAuthenticated).toBe(false);
     });
 
-    it('should update settings with lastUnlockedAt on successful unlock', async () => {
+    it('should not persist an unlock timestamp on successful unlock', async () => {
       (crypto.unlock as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -142,8 +142,8 @@ describe('AuthContext', () => {
         await result.current.unlock('password123');
       });
 
-      expect(db.updateSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ lastUnlockedAt: expect.any(Number) })
+      expect(db.updateSettings).not.toHaveBeenCalledWith(
+        expect.objectContaining({ lastUnlockedAt: expect.anything() })
       );
     });
   });
@@ -180,7 +180,7 @@ describe('AuthContext', () => {
       expect(crypto.createVault).toHaveBeenCalledWith('newpassword');
     });
 
-    it('should update settings with lastUnlockedAt on vault creation', async () => {
+    it('should not persist an unlock timestamp on vault creation', async () => {
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       await vi.waitFor(() => {
@@ -191,8 +191,8 @@ describe('AuthContext', () => {
         await result.current.createNewVault('newpassword');
       });
 
-      expect(db.updateSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ lastUnlockedAt: expect.any(Number) })
+      expect(db.updateSettings).not.toHaveBeenCalledWith(
+        expect.objectContaining({ lastUnlockedAt: expect.anything() })
       );
     });
   });

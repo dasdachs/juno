@@ -15,7 +15,8 @@ import {
   createVault,
   changePassword as changePwd,
 } from '../lib/crypto';
-import { hasExistingVault, getSettings, updateSettings } from '../lib/db';
+import { hasExistingVault, getSettings } from '../lib/db';
+import { onVaultEvent } from '../lib/vaultEvents';
 
 export interface VaultContextType {
   isLoading: boolean;
@@ -54,6 +55,19 @@ export function VaultProvider({ children }: VaultProviderProps) {
       }
     }
     initialize();
+  }, []);
+
+  // Another tab changed the password (new vault key) or erased everything:
+  // what this tab holds is no longer valid, so lock at once.
+  useEffect(() => {
+    return onVaultEvent((event) => {
+      if (event === 'settings') return;
+      lockVault();
+      setIsVaultUnlocked(false);
+      if (event === 'wiped') {
+        window.location.reload();
+      }
+    });
   }, []);
 
   const resetSessionTimer = useCallback(async () => {
@@ -117,13 +131,28 @@ export function VaultProvider({ children }: VaultProviderProps) {
       }
     };
 
+    // Cached so pagehide can lock synchronously: a page being frozen may
+    // never get to run an async callback. Until loaded, default to locking.
+    let autoLockOnHidden = true;
+    const refreshAutoLockSetting = () => {
+      getSettings()
+        .then((settings) => {
+          autoLockOnHidden = settings.autoLockOnHidden;
+        })
+        .catch(() => {
+          autoLockOnHidden = true;
+        });
+    };
+    refreshAutoLockSetting();
+    const stopWatchingSettings = onVaultEvent((event) => {
+      if (event === 'settings') refreshAutoLockSetting();
+    });
+
     const handlePageHide = () => {
       // Immediate lock on pagehide (mobile browser backgrounding)
-      getSettings().then((settings) => {
-        if (!settings.autoLockOnHidden) return;
-        lockVault();
-        setIsVaultUnlocked(false);
-      });
+      if (!autoLockOnHidden) return;
+      lockVault();
+      setIsVaultUnlocked(false);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -132,6 +161,7 @@ export function VaultProvider({ children }: VaultProviderProps) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
+      stopWatchingSettings();
       if (gracePeriodRef.current) {
         clearTimeout(gracePeriodRef.current);
       }
@@ -142,7 +172,6 @@ export function VaultProvider({ children }: VaultProviderProps) {
     const success = await unlockVault(password);
     if (success) {
       setIsVaultUnlocked(true);
-      await updateSettings({ lastUnlockedAt: Date.now() });
     }
     return success;
   }, []);
@@ -164,7 +193,6 @@ export function VaultProvider({ children }: VaultProviderProps) {
     await createVault(password);
     setHasVault(true);
     setIsVaultUnlocked(true);
-    await updateSettings({ lastUnlockedAt: Date.now() });
   }, []);
 
   const changePassword = useCallback(

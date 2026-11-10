@@ -160,11 +160,12 @@ describe('crypto', () => {
       const encrypted = encryptRecord(record);
 
       expect(encrypted.id).toBe(record.id);
-      expect(encrypted.category).toBe(record.type);
+      expect(encrypted).not.toHaveProperty('category');
+      expect(encrypted).not.toHaveProperty('timestamp');
       expect(encrypted.nonce).toBeDefined();
       expect(encrypted.ciphertext).toBeDefined();
       expect(encrypted.ciphertext).not.toContain('Test Note');
-      expect(encrypted.version).toBe(2);
+      expect(encrypted.version).toBe(3);
 
       const decrypted = decryptRecord(encrypted);
 
@@ -190,7 +191,7 @@ describe('crypto', () => {
       lock();
 
       expect(() => encryptRecord(record)).toThrow('Vault is locked');
-      expect(() => decryptRecord({ id: '1', nonce: '', ciphertext: '', category: 'note', version: 2, timestamp: Date.now() }))
+      expect(() => decryptRecord({ id: '1', nonce: '', ciphertext: '', version: 3 }))
         .toThrow('Vault is locked');
     });
   });
@@ -224,8 +225,8 @@ describe('crypto', () => {
     it('should encrypt/decrypt cycle data round-trip', () => {
       const cycle = createTestCycle();
       const encrypted = encryptCycleData(cycle);
-      expect(encrypted.version).toBe(2);
-      expect(encrypted.startDate).toBe(cycle.startDate);
+      expect(encrypted.version).toBe(3);
+      expect(encrypted).not.toHaveProperty('startDate');
 
       const decrypted = decryptCycleData(encrypted);
       expect(decrypted.id).toBe(cycle.id);
@@ -236,7 +237,7 @@ describe('crypto', () => {
     it('should encrypt/decrypt user profile round-trip', () => {
       const profile = createTestProfile();
       const encrypted = encryptUserProfile(profile);
-      expect(encrypted.version).toBe(2);
+      expect(encrypted.version).toBe(3);
 
       const decrypted = decryptUserProfile(encrypted);
       expect(decrypted.id).toBe(profile.id);
@@ -268,9 +269,6 @@ describe('crypto', () => {
       expect(() => {
         decryptRecord({
           ...encryptedCycle,
-          category: 'note',
-          version: 2,
-          timestamp: Date.now(),
         });
       }).toThrow();
     });

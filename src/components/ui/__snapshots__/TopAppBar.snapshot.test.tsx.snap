@@ -1,0 +1,32 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TopAppBar > renders title, leading slot and actions 1`] = `
+<DocumentFragment>
+  <header
+    class="fixed top-app-bar"
+  >
+    <nav>
+      <span>
+        J
+      </span>
+      <h1
+        class="max app-bar-title"
+      >
+        Juno
+      </h1>
+      <button
+        aria-label="Lock app"
+        class="circle transparent"
+        title="Lock app"
+        type="button"
+      >
+        <i
+          aria-hidden="true"
+        >
+          lock
+        </i>
+      </button>
+    </nav>
+  </header>
+</DocumentFragment>
+`;

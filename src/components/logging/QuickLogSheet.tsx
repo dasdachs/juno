@@ -1,5 +1,5 @@
-import { BottomSheet } from '../common/BottomSheet';
-import { RECORD_TYPE_META, RECORD_TYPE_ORDER } from '../../lib/recordTypeMeta';
+import { BottomSheet } from '../ui';
+import { RecordTypeTiles } from '../calendar/RecordTypeTiles';
 import type { RecordType } from '../../lib/types';
 
 interface QuickLogSheetProps {
@@ -18,23 +18,7 @@ export function QuickLogSheet({
 }: QuickLogSheetProps) {
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title={title}>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {RECORD_TYPE_ORDER.map((type) => {
-          const meta = RECORD_TYPE_META[type];
-          const Icon = meta.icon;
-          return (
-            <button
-              key={type}
-              type="button"
-              onClick={() => onSelect(type)}
-              className={`flex flex-col items-center justify-center gap-2 p-5 rounded-xl transition-colors duration-200 ${meta.tileClass}`}
-            >
-              <Icon className="w-6 h-6" />
-              <span className="text-sm font-medium">{meta.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      <RecordTypeTiles onSelect={onSelect} />
     </BottomSheet>
   );
 }

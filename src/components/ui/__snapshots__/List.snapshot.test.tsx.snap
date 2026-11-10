@@ -1,0 +1,80 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`List > renders an interactive item with a toned icon badge 1`] = `
+<DocumentFragment>
+  <ul
+    class="list"
+  >
+    <li
+      class="interactive"
+    >
+      <button
+        aria-label="Edit Happy, Calm"
+        class="plain list-action"
+        type="button"
+      >
+        <span
+          class="icon-badge tone-mood"
+        >
+          <i
+            aria-hidden="true"
+          >
+            mood
+          </i>
+        </span>
+        <div
+          class="max"
+        >
+          <div
+            class="headline"
+          >
+            Happy, Calm
+          </div>
+        </div>
+      </button>
+    </li>
+  </ul>
+</DocumentFragment>
+`;
+
+exports[`List > renders static items with icon, supporting text and trailing content 1`] = `
+<DocumentFragment>
+  <ul
+    class="list border"
+  >
+    <li>
+      <i
+        aria-hidden="true"
+      >
+        schedule
+      </i>
+      <div
+        class="max"
+      >
+        <div
+          class="headline"
+        >
+          Session timeout
+        </div>
+        <div
+          class="supporting"
+        >
+          Lock after inactivity
+        </div>
+      </div>
+      15 min
+    </li>
+    <li>
+      <div
+        class="max"
+      >
+        <div
+          class="headline"
+        >
+          Version
+        </div>
+      </div>
+    </li>
+  </ul>
+</DocumentFragment>
+`;

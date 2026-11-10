@@ -7,7 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Snackbar } from '../components/ui';
 
 export type ToastVariant = 'success' | 'error';
 
@@ -54,44 +54,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {toast && <ToastBanner toast={toast} onDismiss={dismiss} />}
+      {toast && (
+        <Snackbar key={toast.id} message={toast.message} variant={toast.variant} onDismiss={dismiss} />
+      )}
     </ToastContext.Provider>
-  );
-}
-
-function ToastBanner({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
-  const isError = toast.variant === 'error';
-
-  return (
-    <div
-      key={toast.id}
-      role={isError ? 'alert' : 'status'}
-      aria-live={isError ? 'assertive' : 'polite'}
-      className="fixed left-1/2 -translate-x-1/2 bottom-20 sm:bottom-6 z-[100] w-[calc(100%-2rem)] max-w-sm"
-    >
-      <div
-        className={`flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg border ${
-          isError
-            ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
-            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100'
-        }`}
-      >
-        {isError ? (
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-500 dark:text-red-400" />
-        ) : (
-          <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-500 dark:text-emerald-400" />
-        )}
-        <p className="flex-1 text-sm">{toast.message}</p>
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label="Dismiss notification"
-          className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors duration-200"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
   );
 }
 

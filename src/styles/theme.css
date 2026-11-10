@@ -1,0 +1,133 @@
+/*
+ * Juno's Material Design 3 colour scheme, seeded from rose (#e11d48).
+ * Overrides BeerCSS's default purple tokens. BeerCSS switches scheme through
+ * a `light` / `dark` class on <body> (set by ThemeContext).
+ */
+
+:root,
+body.light {
+  --primary: #b91c40;
+  --on-primary: #ffffff;
+  --primary-container: #ffd9dc;
+  --on-primary-container: #40000f;
+  --secondary: #765659;
+  --on-secondary: #ffffff;
+  --secondary-container: #ffd9dc;
+  --on-secondary-container: #2c1517;
+  --tertiary: #775930;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #ffddb1;
+  --on-tertiary-container: #2a1800;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #410002;
+  --background: #fffbff;
+  --on-background: #201a1a;
+  --surface: #fff8f7;
+  --on-surface: #201a1a;
+  --surface-variant: #f4dddd;
+  --on-surface-variant: #524344;
+  --outline: #857373;
+  --outline-variant: #d7c1c2;
+  --shadow: #000000;
+  --scrim: #000000;
+  --inverse-surface: #362f2f;
+  --inverse-on-surface: #fbeeed;
+  --inverse-primary: #ffb2b9;
+  --surface-dim: #e4d7d7;
+  --surface-bright: #fff8f7;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #fef0f0;
+  --surface-container: #f8ebea;
+  --surface-container-high: #f2e5e4;
+  --surface-container-highest: #ece0df;
+
+  /* Record-type accents (container / on-container pairs) */
+  --period: #ffd9dc;
+  --on-period: #7a0025;
+  --symptom: #ffe08a;
+  --on-symptom: #5c4300;
+  --mood: #cde5ff;
+  --on-mood: #004a77;
+  --intimacy: #e9ddff;
+  --on-intimacy: #4f378a;
+  --note: #e6e1e6;
+  --on-note: #49454e;
+
+  /* Flow intensity ramp, lightest to heaviest */
+  --flow-1: #ffb2b9;
+  --flow-2: #ff8795;
+  --flow-3: #f0506e;
+  --flow-4: #d12a50;
+  --flow-5: #91002d;
+  --on-flow-low: #40000f;
+  --on-flow-high: #ffffff;
+
+  --font: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+body.dark {
+  --primary: #ffb2b9;
+  --on-primary: #67001d;
+  --primary-container: #91002d;
+  --on-primary-container: #ffd9dc;
+  --secondary: #e5bdbf;
+  --on-secondary: #44292c;
+  --secondary-container: #5c3f42;
+  --on-secondary-container: #ffd9dc;
+  --tertiary: #e7c08e;
+  --on-tertiary: #432c06;
+  --tertiary-container: #5c421a;
+  --on-tertiary-container: #ffddb1;
+  --error: #ffb4ab;
+  --on-error: #690005;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+  --background: #201a1a;
+  --on-background: #ece0df;
+  --surface: #181212;
+  --on-surface: #ece0df;
+  --surface-variant: #524344;
+  --on-surface-variant: #d7c1c2;
+  --outline: #9f8c8c;
+  --outline-variant: #524344;
+  --shadow: #000000;
+  --scrim: #000000;
+  --inverse-surface: #ece0df;
+  --inverse-on-surface: #362f2f;
+  --inverse-primary: #b91c40;
+  --surface-dim: #181212;
+  --surface-bright: #3f3737;
+  --surface-container-lowest: #120d0d;
+  --surface-container-low: #201a1a;
+  --surface-container: #251e1e;
+  --surface-container-high: #2f2828;
+  --surface-container-highest: #3b3333;
+
+  --period: #7a0025;
+  --on-period: #ffd9dc;
+  --symptom: #5c4300;
+  --on-symptom: #ffe08a;
+  --mood: #004a77;
+  --on-mood: #cde5ff;
+  --intimacy: #4f378a;
+  --on-intimacy: #e9ddff;
+  --note: #49454e;
+  --on-note: #e6e1e6;
+
+  --flow-1: #7a0025;
+  --flow-2: #a3143a;
+  --flow-3: #d12a50;
+  --flow-4: #f0506e;
+  --flow-5: #ffb2b9;
+  --on-flow-low: #ffffff;
+  --on-flow-high: #40000f;
+}
+
+/* Accent helpers: <element class="tone-mood"> */
+.tone-period { background-color: var(--period) !important; color: var(--on-period) !important; }
+.tone-symptom { background-color: var(--symptom) !important; color: var(--on-symptom) !important; }
+.tone-mood { background-color: var(--mood) !important; color: var(--on-mood) !important; }
+.tone-intimacy { background-color: var(--intimacy) !important; color: var(--on-intimacy) !important; }
+.tone-note { background-color: var(--note) !important; color: var(--on-note) !important; }

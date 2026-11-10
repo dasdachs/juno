@@ -32,9 +32,7 @@ describe('db', () => {
         id: 'test-1',
         nonce: 'abc123',
         ciphertext: 'encrypted-data',
-        category: 'note',
         version: 1,
-        timestamp: Date.now(),
       };
 
       await db.records.put(record);
@@ -43,34 +41,10 @@ describe('db', () => {
       expect(retrieved).toEqual(record);
     });
 
-    it('should query records by category', async () => {
-      const noteRecord: EncryptedRecord = {
-        id: 'note-1',
-        nonce: 'nonce1',
-        ciphertext: 'data1',
-        category: 'note',
-        version: 1,
-        timestamp: Date.now(),
-      };
-
-      const vitalRecord: EncryptedRecord = {
-        id: 'vital-1',
-        nonce: 'nonce2',
-        ciphertext: 'data2',
-        category: 'vital',
-        version: 1,
-        timestamp: Date.now(),
-      };
-
-      await db.records.bulkPut([noteRecord, vitalRecord]);
-
-      const notes = await db.records.where('category').equals('note').toArray();
-      expect(notes).toHaveLength(1);
-      expect(notes[0].id).toBe('note-1');
-
-      const vitals = await db.records.where('category').equals('vital').toArray();
-      expect(vitals).toHaveLength(1);
-      expect(vitals[0].id).toBe('vital-1');
+    it('should not index plaintext metadata columns', async () => {
+      expect(db.records.schema.indexes.map((i) => i.name)).toEqual([]);
+      expect(db.cycles.schema.indexes.map((i) => i.name)).toEqual([]);
+      await expect(db.records.where('category').equals('note').toArray()).rejects.toThrow();
     });
 
     it('should delete records', async () => {
@@ -78,9 +52,7 @@ describe('db', () => {
         id: 'delete-me',
         nonce: 'nonce',
         ciphertext: 'data',
-        category: 'note',
         version: 1,
-        timestamp: Date.now(),
       };
 
       await db.records.put(record);
@@ -97,9 +69,7 @@ describe('db', () => {
         id: 'r1',
         nonce: 'n',
         ciphertext: 'c',
-        category: 'note',
         version: 1,
-        timestamp: Date.now(),
       });
 
       await db.keyStore.put({
@@ -127,6 +97,34 @@ describe('db', () => {
       expect(await db.records.count()).toBe(0);
       expect(await db.keyStore.count()).toBe(0);
       expect(await db.settings.count()).toBe(0);
+    });
+
+    it('empties all five tables, removes the vault and leaves the db usable', async () => {
+      await db.records.put({ id: 'r1', nonce: 'n', ciphertext: 'c', version: 3 });
+      await db.cycles.put({ id: 'c1', nonce: 'n', ciphertext: 'c', version: 3 });
+      await db.userProfile.put({ id: 'primary', nonce: 'n', ciphertext: 'c', version: 3 });
+      await db.keyStore.put({ id: 'primary', salt: 's', encryptedVaultKey: 'k', vaultKeyNonce: 'n' });
+      await db.settings.put({
+        id: 'primary',
+        sessionTimeout: 1,
+        periodReminderEnabled: false,
+        periodReminderDays: 2,
+        autoLockOnHidden: true,
+        autoLockGracePeriod: 1,
+      });
+      expect(await hasExistingVault()).toBe(true);
+
+      await clearAllData();
+
+      expect(await db.records.count()).toBe(0);
+      expect(await db.cycles.count()).toBe(0);
+      expect(await db.userProfile.count()).toBe(0);
+      expect(await db.keyStore.count()).toBe(0);
+      expect(await db.settings.count()).toBe(0);
+      expect(await hasExistingVault()).toBe(false);
+
+      await db.records.put({ id: 'after', nonce: 'n', ciphertext: 'c', version: 3 });
+      expect((await db.records.get('after'))?.id).toBe('after');
     });
   });
 
@@ -221,7 +219,7 @@ describe('db', () => {
       await db.settings.put({
         id: 'primary',
         sessionTimeout: 10 * 60 * 1000,
-        lastUnlockedAt: 12345,
+        deviceId: 'dev-1',
         periodReminderEnabled: true,
         periodReminderDays: 3,
         autoLockOnHidden: true,
@@ -232,7 +230,7 @@ describe('db', () => {
 
       const settings = await db.settings.get('primary');
       expect(settings?.sessionTimeout).toBe(20 * 60 * 1000);
-      expect(settings?.lastUnlockedAt).toBe(12345);
+      expect(settings?.deviceId).toBe('dev-1');
     });
   });
 });

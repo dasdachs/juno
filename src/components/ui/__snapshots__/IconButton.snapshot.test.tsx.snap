@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`IconButton > renders a standard icon button with an accessible name 1`] = `
+<DocumentFragment>
+  <button
+    aria-label="Lock app"
+    class="circle transparent"
+    title="Lock app"
+    type="button"
+  >
+    <i
+      aria-hidden="true"
+    >
+      lock
+    </i>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`IconButton > renders the tonal variant 1`] = `
+<DocumentFragment>
+  <button
+    aria-label="Edit"
+    class="circle fill"
+    title="Edit"
+    type="button"
+  >
+    <i
+      aria-hidden="true"
+    >
+      edit
+    </i>
+  </button>
+</DocumentFragment>
+`;

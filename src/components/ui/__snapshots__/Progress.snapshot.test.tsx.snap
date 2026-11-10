@@ -1,0 +1,33 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Progress > renders a full-screen indicator with a custom label 1`] = `
+<DocumentFragment>
+  <div
+    class="progress-screen"
+    role="status"
+  >
+    <progress
+      class="circle"
+    />
+    <p>
+      Unlocking...
+    </p>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`Progress > renders an inline indicator with the default label 1`] = `
+<DocumentFragment>
+  <div
+    class="center-align"
+    role="status"
+  >
+    <progress
+      class="circle"
+    />
+    <p>
+      Loading...
+    </p>
+  </div>
+</DocumentFragment>
+`;

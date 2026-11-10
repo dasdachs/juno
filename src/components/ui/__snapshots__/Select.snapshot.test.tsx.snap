@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Select > renders an outlined select with a label 1`] = `
+<DocumentFragment>
+  <div
+    class="field label border suffix"
+  >
+    <select
+      id="fmt"
+    >
+      <option
+        value="us"
+      >
+        US
+      </option>
+      <option
+        value="iso"
+      >
+        ISO
+      </option>
+    </select>
+    <label
+      for="fmt"
+    >
+      Date format
+    </label>
+    <i
+      aria-hidden="true"
+    >
+      arrow_drop_down
+    </i>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`Select > renders the compact variant with a hidden label 1`] = `
+<DocumentFragment>
+  <div
+    class="field border suffix small"
+  >
+    <select
+      aria-label="Date format"
+      id="fmt"
+    >
+      <option
+        value="us"
+      >
+        US
+      </option>
+      <option
+        value="iso"
+      >
+        ISO
+      </option>
+    </select>
+    <i
+      aria-hidden="true"
+    >
+      arrow_drop_down
+    </i>
+  </div>
+</DocumentFragment>
+`;

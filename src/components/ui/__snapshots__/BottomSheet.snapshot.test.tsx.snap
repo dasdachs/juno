@@ -1,0 +1,52 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BottomSheet > renders an open sheet with handle, title and content 1`] = `
+<DocumentFragment>
+  <button
+    aria-label="Close"
+    class="scrim"
+    tabindex="-1"
+    type="button"
+  />
+  <dialog
+    aria-label="Log Mood"
+    aria-modal="true"
+    class="bottom active sheet"
+    open=""
+    tabindex="-1"
+  >
+    <div
+      aria-hidden="true"
+      class="sheet-handle"
+    />
+    <nav
+      class="sheet-header"
+    >
+      <h6
+        class="max"
+      >
+        Log Mood
+      </h6>
+      <button
+        aria-label="Close Log Mood"
+        class="circle transparent"
+        title="Close Log Mood"
+        type="button"
+      >
+        <i
+          aria-hidden="true"
+        >
+          close
+        </i>
+      </button>
+    </nav>
+    <div
+      class="sheet-content"
+    >
+      <p>
+        content
+      </p>
+    </div>
+  </dialog>
+</DocumentFragment>
+`;

@@ -1,0 +1,82 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`NavigationBar > renders a bottom bar with the current destination active 1`] = `
+<DocumentFragment>
+  <nav
+    aria-label="Main"
+    class="bottom s"
+  >
+    <a
+      class=""
+      data-discover="true"
+      href="/"
+    >
+      <i
+        aria-hidden="true"
+      >
+        calendar_month
+      </i>
+      <span>
+        Calendar
+      </span>
+    </a>
+    <a
+      aria-current="page"
+      class="active"
+      data-discover="true"
+      href="/history"
+    >
+      <i
+        aria-hidden="true"
+      >
+        history
+      </i>
+      <span>
+        History
+      </span>
+    </a>
+  </nav>
+</DocumentFragment>
+`;
+
+exports[`NavigationBar > renders a drawer with extra content 1`] = `
+<DocumentFragment>
+  <nav
+    aria-label="Main"
+    class="left max m l"
+  >
+    <a
+      aria-current="page"
+      class="active"
+      data-discover="true"
+      href="/"
+    >
+      <i
+        aria-hidden="true"
+      >
+        calendar_month
+      </i>
+      <span>
+        Calendar
+      </span>
+    </a>
+    <a
+      class=""
+      data-discover="true"
+      href="/history"
+    >
+      <i
+        aria-hidden="true"
+      >
+        history
+      </i>
+      <span>
+        History
+      </span>
+    </a>
+    <button>
+      Lock App
+    </button>
+  </nav>
+</DocumentFragment>
+`;

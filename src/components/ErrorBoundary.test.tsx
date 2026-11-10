@@ -114,9 +114,10 @@ describe('ErrorBoundary', () => {
   it('should display error icon', () => {
     render(<TestWrapper shouldThrow={true} />);
 
-    // The SVG warning icon should be present
-    const icon = document.querySelector('svg');
+    // The Material Symbol warning icon should be present
+    const icon = document.querySelector('i[aria-hidden="true"]');
     expect(icon).toBeInTheDocument();
+    expect(icon).toHaveTextContent('warning');
   });
 
   it('should have correct button styles', () => {
@@ -125,7 +126,8 @@ describe('ErrorBoundary', () => {
     const tryAgainButton = screen.getByRole('button', { name: 'Try Again' });
     const reloadButton = screen.getByRole('button', { name: 'Reload App' });
 
-    expect(tryAgainButton).toHaveClass('bg-gray-100');
-    expect(reloadButton).toHaveClass('bg-rose-500');
+    // Secondary action is an outlined button, primary action a filled one
+    expect(tryAgainButton).toHaveClass('border');
+    expect(reloadButton).not.toHaveClass('border');
   });
 });

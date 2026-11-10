@@ -15,6 +15,7 @@
   "dependencies": {
     "@types/libsodium-wrappers-sumo": "^0.7.8",
     "@types/zxcvbn": "^4.4.5",
+    "beercss": "^5.0.3",
     "date-fns": "^4.1.0",
     "dexie": "^4.2.1",
     "libsodium-wrappers-sumo": "^0.7.16",
@@ -27,7 +28,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
-    "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@types/react": "^18.3.18",
@@ -41,7 +41,6 @@
     "globals": "^15.14.0",
     "happy-dom": "^20.0.11",
     "jsdom": "^27.4.0",
-    "tailwindcss": "^4.1.18",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.5",

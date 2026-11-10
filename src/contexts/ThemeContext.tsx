@@ -45,14 +45,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // Update document class when resolved theme changes
+  // Update body class when resolved theme changes
   useEffect(() => {
-    const root = document.documentElement;
-    if (resolvedTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    // BeerCSS reads the theme from a `light`/`dark` class on <body>
+    document.body.classList.remove('light', 'dark');
+    document.body.classList.add(resolvedTheme);
   }, [resolvedTheme]);
 
   const setTheme = (newTheme: Theme) => {

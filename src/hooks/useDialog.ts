@@ -16,8 +16,11 @@ const FOCUSABLE_SELECTOR = [
  *
  * Attach the returned ref to the dialog element.
  */
-export function useDialog(isOpen: boolean, onClose: () => void) {
-  const dialogRef = useRef<HTMLDivElement>(null);
+export function useDialog<T extends HTMLElement = HTMLDivElement>(
+  isOpen: boolean,
+  onClose: () => void
+) {
+  const dialogRef = useRef<T>(null);
 
   useEffect(() => {
     if (!isOpen) return;

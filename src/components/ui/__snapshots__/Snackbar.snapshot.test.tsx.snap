@@ -1,0 +1,67 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Snackbar > renders a polite success message 1`] = `
+<DocumentFragment>
+  <div
+    aria-live="polite"
+    class="snackbar active"
+    role="status"
+  >
+    <i
+      aria-hidden="true"
+    >
+      check_circle
+    </i>
+    <div
+      class="max"
+    >
+      Mood saved
+    </div>
+    <button
+      aria-label="Dismiss notification"
+      class="circle transparent"
+      title="Dismiss notification"
+      type="button"
+    >
+      <i
+        aria-hidden="true"
+      >
+        close
+      </i>
+    </button>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`Snackbar > renders an assertive error message 1`] = `
+<DocumentFragment>
+  <div
+    aria-live="assertive"
+    class="snackbar active error"
+    role="alert"
+  >
+    <i
+      aria-hidden="true"
+    >
+      error
+    </i>
+    <div
+      class="max"
+    >
+      Couldn't save
+    </div>
+    <button
+      aria-label="Dismiss notification"
+      class="circle transparent"
+      title="Dismiss notification"
+      type="button"
+    >
+      <i
+        aria-hidden="true"
+      >
+        close
+      </i>
+    </button>
+  </div>
+</DocumentFragment>
+`;

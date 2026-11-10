@@ -1,13 +1,13 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import { beerLocalFonts } from './vite.beerFonts'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(),
+    beerLocalFonts(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
@@ -38,7 +38,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm,woff2}'],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
@@ -79,6 +79,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,ts,tsx}'],
+    // Argon2id (128 MB) is deliberately slow; allow for it on loaded CI machines
+    testTimeout: 20000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

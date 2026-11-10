@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SegmentedButton > renders segments with the selected one checked 1`] = `
+<DocumentFragment>
+  <div
+    aria-label="Theme"
+    class="segmented"
+    role="group"
+  >
+    <button
+      aria-pressed="false"
+      class="border"
+      type="button"
+    >
+      <i
+        aria-hidden="true"
+      >
+        light_mode
+      </i>
+      <span>
+        Light
+      </span>
+    </button>
+    <button
+      aria-pressed="true"
+      class="border fill"
+      type="button"
+    >
+      <i
+        aria-hidden="true"
+      >
+        check
+      </i>
+      <span>
+        Dark
+      </span>
+    </button>
+    <button
+      aria-pressed="false"
+      class="border"
+      type="button"
+    >
+      <span>
+        Auto
+      </span>
+    </button>
+  </div>
+</DocumentFragment>
+`;

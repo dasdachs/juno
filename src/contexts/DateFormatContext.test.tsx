@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { DateFormatProvider, useDateFormat } from './DateFormatContext';
-import { db, clearAllData } from '../lib/db';
+import { db } from '../lib/db';
 
 vi.mock('../lib/dateFormat', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/dateFormat')>();
@@ -31,7 +31,7 @@ function renderHarness() {
 
 describe('DateFormatContext', () => {
   beforeEach(async () => {
-    await clearAllData();
+    await Promise.all(db.tables.map((t) => t.clear()));
   });
 
   it('loads the style from existing settings', async () => {

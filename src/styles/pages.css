@@ -1,0 +1,84 @@
+/*
+ * Insights, History, Profile and the avatar. Colours come from the MD3 tokens
+ * in theme.css; never hard-code a colour here.
+ */
+
+.page-title { font-size: 1.5rem; line-height: 2rem; font-weight: 400; margin: 0; }
+.page-header { display: flex; align-items: center; gap: 0.5rem; }
+.page-header > button { margin: 0; }
+
+.section-title.with-icon { display: flex; align-items: center; gap: 0.5rem; }
+.card-title { font-size: 1rem; line-height: 1.5rem; font-weight: 500; margin: 0; }
+
+.empty-state { text-align: center; padding: 2rem 1rem; color: var(--on-surface-variant); }
+
+/* ---------- Insights ---------- */
+
+.stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.stat-grid > * { margin: 0; }
+.stat-value { font-size: 1.375rem; line-height: 1.75rem; }
+.stat-value.large { font-size: 2rem; line-height: 2.5rem; }
+.stat-label { font-size: 0.75rem; line-height: 1rem; color: var(--on-surface-variant); }
+.primary-container .stat-label { color: inherit; }
+
+.detail-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-block-size: 2rem; }
+.detail-row > :first-child { color: var(--on-surface-variant); }
+
+article.list-card { padding: 0; overflow: hidden; }
+
+/* ---------- History ---------- */
+
+/* Entries carry free text, so let rows grow instead of BeerCSS's single line. */
+.list.wrapping > li { white-space: normal; }
+.list.wrapping .max { min-inline-size: 0; overflow-wrap: anywhere; }
+
+.entry-kind {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.03rem;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+.entry-trailing { display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; color: var(--on-surface-variant); }
+.entry-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-block: 0.125rem; }
+.entry-tags > .chip { --_size: 1.5rem; --_padding: 0.5rem; font-size: 0.75rem; margin: 0; border: 0; }
+
+/* ---------- Profile ---------- */
+
+.profile-identity { display: flex; align-items: center; gap: 1rem; }
+.profile-identity > .field { flex: 1; margin: 0; }
+
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.field-grid .field { margin: 0; }
+
+.unit-field { display: flex; align-items: center; gap: 0.5rem; }
+.unit-field > .field { flex: 1; min-inline-size: 0; }
+
+.avatar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.avatar-actions > * { margin: 0; }
+
+/* BeerCSS turns a file input into an invisible overlay; this label is its visible button. */
+label.file-button { position: relative; margin: 0; cursor: pointer; }
+label.file-button:focus-within { outline: 0.125rem solid var(--primary); outline-offset: 0.125rem; }
+label.file-button > input[type="file"] { cursor: pointer; }
+
+/* ---------- Avatar ---------- */
+
+.avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  font-weight: 500;
+  background-color: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+}
+.avatar.sm { inline-size: 2rem; block-size: 2rem; font-size: 0.75rem; }
+.avatar.md { inline-size: 3rem; block-size: 3rem; font-size: 1rem; }
+.avatar.lg { inline-size: 5rem; block-size: 5rem; font-size: 1.5rem; }
+.avatar > img { inline-size: 100%; block-size: 100%; object-fit: cover; border-radius: 0; }
+.avatar.initials { background-color: var(--primary); color: var(--on-primary); }
+.avatar.placeholder { background-color: var(--primary-container); color: var(--on-primary-container); }

@@ -20,10 +20,16 @@ Juno is a privacy-focused period tracking PWA. All user data is encrypted client
 ### Core Security Model
 
 **Encryption Layer** (`src/lib/crypto.ts`):
-- Uses libsodium (Argon2id + XChaCha20-Poly1305)
+- Uses libsodium (Argon2id + XSalsa20-Poly1305 via `crypto_secretbox`)
 - Password → master key → vault key derivation
 - Vault key held in memory only while unlocked; cleared via `sodium.memzero()` on lock
 - All records, cycles, and profile data encrypted before storage
+- Stored rows are `{id, nonce, ciphertext, version}` only: entry type, dates and timestamps live inside the ciphertext and must never be copied into plaintext columns or indexes (filter/sort after decryption)
+- Format v3: per-item key = keyed BLAKE2b over context + full ID; plaintext padded to 256-byte blocks; v2 rows are re-encrypted on unlock
+- Deletions leave content-free tombstones (records and cycles); backups and sync files are passphrase-sealed (`sealWithPassword`)
+- Changing the password rotates the vault key and re-encrypts every row; other tabs are told to lock via `src/lib/vaultEvents.ts`
+- No remote resources: the avatar is an embedded `data:` image, and CSP `img-src` has no `https:`
+- See `docs/SECURITY_REVIEW_2026-11-10.md` for the latest audit and open items
 
 **Database** (`src/lib/db.ts`):
 - Dexie wrapper over IndexedDB (database name: `JunoVault`)

@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSwipeable } from 'react-swipeable';
-import { addMonths, subMonths } from 'date-fns';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarGrid } from './CalendarGrid';
 import { CalendarLegend } from './CalendarLegend';
+import { CycleStatus } from './CycleStatus';
+import { useCalendarMonth } from './useCalendarMonth';
 import { usePredictions } from '../../hooks/usePredictions';
 import { useProfile } from '../../hooks/useProfile';
 import { useRecords } from '../../hooks/useRecords';
@@ -14,94 +15,44 @@ interface CalendarProps {
 }
 
 export function Calendar({ onDaySelect }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const view = useCalendarMonth();
   const { profile } = useProfile();
   const { records } = useRecords();
   const { getMonthData, currentCycleDay, daysUntilPeriod, prediction } = usePredictions();
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
   const monthData = useMemo(() => {
-    return getMonthData(year, month, records);
-  }, [year, month, records, getMonthData]);
-
-  const handlePrevMonth = useCallback(() => {
-    setCurrentDate((date) => subMonths(date, 1));
-  }, []);
-
-  const handleNextMonth = useCallback(() => {
-    setCurrentDate((date) => addMonths(date, 1));
-  }, []);
-
-  const handleToday = useCallback(() => {
-    setCurrentDate(new Date());
-  }, []);
-
-  const handleMonthChange = useCallback((newMonth: number) => {
-    setCurrentDate((date) => new Date(date.getFullYear(), newMonth, 1));
-  }, []);
-
-  const handleYearChange = useCallback((newYear: number) => {
-    setCurrentDate((date) => new Date(newYear, date.getMonth(), 1));
-  }, []);
+    return getMonthData(view.year, view.month, records);
+  }, [view.year, view.month, records, getMonthData]);
 
   const swipeHandlers = useSwipeable({
-    onSwipedLeft: handleNextMonth,
-    onSwipedRight: handlePrevMonth,
+    onSwipedLeft: view.nextMonth,
+    onSwipedRight: view.prevMonth,
     trackMouse: false,
     trackTouch: true,
     delta: 50,
   });
 
-  const weekStartsOn = profile?.weekStartsOn ?? 0;
-
   return (
-    <div className="bg-white dark:bg-gray-800" {...swipeHandlers}>
-      {/* Cycle status bar */}
-      {(currentCycleDay || daysUntilPeriod !== null) && (
-        <div className="px-4 py-3 bg-rose-50 dark:bg-gray-800 border-b border-rose-100 dark:border-gray-700">
-          <div className="flex items-center justify-between text-sm">
-            {currentCycleDay && (
-              <div className="text-rose-700 dark:text-rose-400">
-                <span className="font-semibold">Day {currentCycleDay}</span>
-                <span className="text-rose-600 dark:text-rose-500 ml-1">of your cycle</span>
-              </div>
-            )}
-            {daysUntilPeriod !== null && daysUntilPeriod > 0 && (
-              <div className="text-rose-600 dark:text-rose-500">
-                {daysUntilPeriod === 1
-                  ? 'Period expected tomorrow'
-                  : `Period in ${daysUntilPeriod} days`}
-                {prediction && (
-                  <span className="text-xs text-rose-400 dark:text-rose-500 ml-1">
-                    ({prediction.confidence} confidence)
-                  </span>
-                )}
-              </div>
-            )}
-            {daysUntilPeriod === 0 && (
-              <div className="text-rose-600 dark:text-rose-500 font-medium">
-                Period expected today
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+    <div className="stack" {...swipeHandlers}>
+      <CycleStatus
+        currentCycleDay={currentCycleDay}
+        daysUntilPeriod={daysUntilPeriod}
+        confidence={prediction?.confidence}
+      />
 
       <CalendarHeader
-        year={year}
-        month={month}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-        onToday={handleToday}
-        onMonthChange={handleMonthChange}
-        onYearChange={handleYearChange}
+        year={view.year}
+        month={view.month}
+        onPrevMonth={view.prevMonth}
+        onNextMonth={view.nextMonth}
+        onToday={view.today}
+        onMonthChange={view.setMonth}
+        onYearChange={view.setYear}
       />
 
       <CalendarGrid
         days={monthData.days}
-        weekStartsOn={weekStartsOn}
+        weekStartsOn={profile?.weekStartsOn ?? 0}
         onDayClick={onDaySelect}
       />
 

@@ -1,0 +1,51 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Chip > renders a selected filter chip with a check 1`] = `
+<DocumentFragment>
+  <button
+    aria-pressed="true"
+    class="chip"
+    type="button"
+  >
+    <i
+      aria-hidden="true"
+    >
+      check
+    </i>
+    <span>
+      Mood
+    </span>
+  </button>
+</DocumentFragment>
+`;
+
+exports[`Chip > renders a static label chip 1`] = `
+<DocumentFragment>
+  <span
+    class="chip"
+  >
+    <i
+      aria-hidden="true"
+    >
+      cycle
+    </i>
+    <span>
+      Cycle Day 3
+    </span>
+  </span>
+</DocumentFragment>
+`;
+
+exports[`Chip > renders an unselected filter chip 1`] = `
+<DocumentFragment>
+  <button
+    aria-pressed="false"
+    class="chip"
+    type="button"
+  >
+    <span>
+      Mood
+    </span>
+  </button>
+</DocumentFragment>
+`;

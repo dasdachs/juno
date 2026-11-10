@@ -120,7 +120,7 @@ describe('calendar entry delete (DayDetailSheet -> LogFormHost integration)', ()
     fireEvent.click(screen.getByRole('button', { name: /edit medium flow/i }));
 
     expect(screen.getByText('Edit Period')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Medium' })).toHaveClass('ring-2');
+    expect(screen.getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('deletes the tapped record after two-step confirmation and closes the form', async () => {
